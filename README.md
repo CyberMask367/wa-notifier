@@ -4,7 +4,7 @@ A self-hosted WhatsApp notification hub with a web UI, REST API, webhooks, sched
 
 Built on [Baileys](https://github.com/WhiskeySockets/Baileys), it links to your personal WhatsApp account via QR code, exactly like WhatsApp Web.
 
-![Dashboard](docs/overview.png)
+![Dashboard](https://drive.google.com/file/d/1ZENHnxMK2ThbiSoowTef4CbMOEILeAMy/view?usp=sharing)
 
 ---
 
@@ -203,7 +203,7 @@ Once saved, the group appears alongside contacts in every recipient dropdown.
 
 <!-- TODO: Replace with video embed or link once recorded -->
 
-> 🎬 ![Video](docs/video.mp4) — Here's a short video showing exactly how to find your WhatsApp Group JID.
+> 🎬 ![Video]() — Here's a short video showing exactly how to find your WhatsApp Group JID.
 ---
 
 ## REST API
