@@ -68,7 +68,7 @@ docker run -d \
   -e PORT=3000 \
   -e DATA_DIR=/data \
   -e SESSION_DIR=/data/session \
-  your-dockerhub-username/wa-notifier:latest
+  cybermask367/wa-notifier:latest
 ```
 
 </details>
@@ -85,7 +85,7 @@ docker run -d `
   -e PORT=3000 `
   -e DATA_DIR=/data `
   -e SESSION_DIR=/data/session `
-  your-dockerhub-username/wa-notifier:latest
+  cybermask367/wa-notifier:latest
 ```
 
 > Docker Desktop must be running before executing these commands.
@@ -102,7 +102,7 @@ Once running, open `http://your_ip_address:3000` and scan the QR code to link yo
 <summary>Click to expand</summary>
 
 ```bash
-git clone https://github.com/your-username/whatsapp-notifier.git
+git clone https://github.com/CyberMask367/wa-notifier.git
 cd whatsapp-notifier
 ```
 
