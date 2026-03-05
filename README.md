@@ -203,10 +203,7 @@ Once saved, the group appears alongside contacts in every recipient dropdown.
 
 <!-- TODO: Replace with video embed or link once recorded -->
 
-> 🎬 **Video walkthrough coming soon** — a short video showing exactly how to find your WhatsApp Group JID will be added here.
-
-In the meantime, a Group JID looks like this: `120363198765432100@g.us`
-
+> 🎬 ![Video](docs/video.mp4) — Here's a short video showing exactly how to find your WhatsApp Group JID.
 ---
 
 ## REST API
