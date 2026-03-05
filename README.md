@@ -4,7 +4,7 @@ A self-hosted WhatsApp notification hub with a web UI, REST API, webhooks, sched
 
 Built on [Baileys](https://github.com/WhiskeySockets/Baileys), it links to your personal WhatsApp account via QR code, exactly like WhatsApp Web.
 
-![Dashboard](https://img.shields.io/badge/UI-dark%20terminal-00e676?style=flat-square)
+![Dashboard](docs/overview.png)
 
 ---
 
@@ -25,9 +25,6 @@ Built on [Baileys](https://github.com/WhiskeySockets/Baileys), it links to your 
 ---
 
 ## Installation
-
-<!-- TODO: Add a screenshot/banner of the install flow here -->
-![Install Preview](docs/install-preview.png)
 
 > **Prerequisites:** [Docker Desktop](https://docs.docker.com/get-docker/) (Windows/Mac) or Docker Engine + Docker Compose (Linux). A WhatsApp account to link.
 
@@ -95,7 +92,7 @@ docker run -d `
 
 </details>
 
-Once running, open [http://localhost:3000](http://localhost:3000) and scan the QR code to link your WhatsApp account.
+Once running, open `http://your_ip_address:3000` and scan the QR code to link your WhatsApp account.
 
 ---
 
@@ -162,7 +159,7 @@ For Docker, these are set in `docker-compose.yml`. For bare Node, set them in yo
 
 ## Linking Your WhatsApp Account
 
-1. Open the web UI at `http://localhost:3000`
+1. Open the web UI at `http://your_ip_address:3000`
 2. Click **Connect / Re-auth** in the sidebar footer
 3. Open WhatsApp on your phone → **Linked Devices** → **Link a Device**
 4. Scan the QR code shown in the modal
@@ -203,10 +200,7 @@ Once saved, the group appears alongside contacts in every recipient dropdown.
 
 <!-- TODO: Replace with video embed or link once recorded -->
 
-> 🎬 **Video walkthrough coming soon** — a short video showing exactly how to find your WhatsApp Group JID will be added here.
-
-In the meantime, a Group JID looks like this: `120363198765432100@g.us`
-
+> 🎬 ![Video](docs/video.mp4) — Here's a short video showing exactly how to find your WhatsApp Group JID.
 ---
 
 ## REST API
@@ -279,7 +273,7 @@ Content-Type: application/json
 ### Send a file via multipart upload
 
 ```bash
-curl -X POST http://localhost:3000/api/send-file \
+curl -X POST http://your_ip_address:3000/api/send-file \
   -H "x-api-key: your-api-key" \
   -F "to=2348012345678" \
   -F "file=@/path/to/image.jpg" \
@@ -341,7 +335,7 @@ In the web UI, go to **Webhooks** and create a rule with:
 ### Triggering a webhook
 
 ```bash
-curl -X POST http://localhost:3000/webhook/server-alerts \
+curl -X POST http://your_ip_address:3000/webhook/server-alerts \
   -H "Content-Type: application/json" \
   -d '{"host": "web01", "status": "down", "cpu": "98%"}'
 ```
@@ -360,7 +354,7 @@ If the payload contains an `image`, `image_url`, or `poster` field with a URL, t
 import requests
 
 requests.post(
-    "http://localhost:3000/webhook/server-alerts",
+    "http://your_ip_address:3000/webhook/server-alerts",
     json={"host": "web01", "status": "down", "cpu": "98%"}
 )
 ```
@@ -407,7 +401,7 @@ WA Notifier includes a dedicated handler for [Jellyfin](https://jellyfin.org/) w
 To see the raw payload and parsed variables from Jellyfin:
 
 ```bash
-curl -X POST http://localhost:3000/webhook/jellyfin/debug \
+curl -X POST http://your_ip_address:3000/webhook/jellyfin/debug \
   -H "Content-Type: application/json" \
   -d @jellyfin-payload.json
 ```
