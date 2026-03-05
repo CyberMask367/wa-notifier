@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WA Notifier</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: #242424;
+    --border2: #2e2e2e;
+    --green: #00e676;
+    --green-dim: #00e67622;
+    --red: #ff3d3d;
+    --amber: #ffab00;
+    --blue: #40c4ff;
+    --text: #e0e0e0;
+    --text-dim: #666;
+    --text-muted: #444;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--mono); min-height: 100vh; }
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 220px; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+  }
+  .main { margin-left: 220px; flex: 1; padding: 32px; max-width: 1100px; }
+  .sidebar-header { padding: 20px 16px 12px; border-bottom: 1px solid var(--border); }
+  .logo { font-size: 13px; font-weight: 600; letter-spacing: 0.15em; color: var(--green); text-transform: uppercase; }
+  .logo span { color: var(--text-dim); }
+  .status-pill { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); }
+  .status-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 2s infinite; }
+  .status-dot.qr { background: var(--amber); animation: pulse 1s infinite; }
+  .status-dot.disconnected, .status-dot.logged_out { background: var(--red); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  nav { padding: 12px 8px; flex: 1; }
+  .nav-section { font-size: 9px; letter-spacing: 0.2em; color: var(--text-muted); padding: 12px 8px 4px; text-transform: uppercase; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; color: var(--text-dim); letter-spacing: 0.05em; transition: all 0.15s; border: 1px solid transparent; margin-bottom: 1px; }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active { color: var(--green); background: var(--green-dim); border-color: #00e67633; }
+  .nav-item .icon { width: 14px; text-align: center; font-size: 13px; }
+  .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); }
+  .sidebar-footer a { font-size: 10px; color: var(--text-muted); text-decoration: none; letter-spacing: 0.05em; cursor: pointer; }
+  .page-header { margin-bottom: 28px; }
+  .page-title { font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+  .page-sub { font-size: 11px; color: var(--text-dim); margin-top: 4px; letter-spacing: 0.05em; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 20px; margin-bottom: 16px; }
+  .card-title { font-size: 11px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 16px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 16px 20px; }
+  .stat-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+  .stat-value { font-size: 28px; font-weight: 600; color: var(--text); line-height: 1; }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+  .form-row { display: grid; gap: 12px; margin-bottom: 12px; }
+  .form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); }
+  input, textarea, select { background: var(--surface2); border: 1px solid var(--border2); border-radius: 4px; color: var(--text); font-family: var(--mono); font-size: 12px; padding: 9px 12px; outline: none; transition: border-color 0.15s; }
+  input:focus, textarea:focus, select:focus { border-color: var(--green); }
+  textarea { resize: vertical; min-height: 80px; }
+  select option { background: var(--surface2); }
+  .btn { font-family: var(--mono); font-size: 11px; font-weight: 500; letter-spacing: 0.08em; padding: 8px 16px; border-radius: 4px; border: 1px solid transparent; cursor: pointer; transition: all 0.15s; text-transform: uppercase; }
+  .btn-primary { background: var(--green); color: #000; border-color: var(--green); }
+  .btn-primary:hover { background: #00ff8a; }
+  .btn-secondary { background: transparent; color: var(--text-dim); border-color: var(--border2); }
+  .btn-secondary:hover { border-color: var(--text-dim); color: var(--text); }
+  .btn-danger { background: transparent; color: var(--red); border-color: #ff3d3d44; }
+  .btn-danger:hover { background: #ff3d3d22; }
+  .btn-amber { background: transparent; color: var(--amber); border-color: #ffab0044; }
+  .btn-sm { padding: 5px 10px; font-size: 10px; }
+  .btn-row { display: flex; gap: 8px; align-items: center; margin-top: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-muted); padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text-dim); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  td .actions { display: flex; gap: 6px; }
+  .badge { display: inline-block; font-size: 9px; font-weight: 500; letter-spacing: 0.1em; padding: 2px 7px; border-radius: 20px; text-transform: uppercase; }
+  .badge-green { background: var(--green-dim); color: var(--green); border: 1px solid #00e67633; }
+  .badge-red { background: #ff3d3d22; color: var(--red); border: 1px solid #ff3d3d33; }
+  .badge-amber { background: #ffab0022; color: var(--amber); border: 1px solid #ffab0033; }
+  .badge-blue { background: #40c4ff22; color: var(--blue); border: 1px solid #40c4ff33; }
+  .badge-dim { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 32px; text-align: center; max-width: 360px; width: 90%; }
+  .modal h3 { font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--green); margin-bottom: 8px; }
+  .modal p { font-size: 11px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.6; }
+  .modal img { border: 4px solid white; border-radius: 8px; max-width: 220px; }
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .tab { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; color: var(--text-dim); border-bottom: 2px solid transparent; transition: all 0.15s; margin-bottom: -1px; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--green); border-bottom-color: var(--green); }
+  #toast { position: fixed; bottom: 24px; right: 24px; z-index: 300; font-size: 12px; padding: 10px 16px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); transform: translateY(60px); opacity: 0; transition: all 0.3s; }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { border-color: #00e67644; color: var(--green); }
+  #toast.error { border-color: #ff3d3d44; color: var(--red); }
+  .hidden { display: none !important; }
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+  .hint { font-size: 10px; color: var(--text-muted); line-height: 1.6; margin-top: 4px; }
+  .code { background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 2px 6px; font-size: 11px; }
+  .full-code { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 12px; font-size: 11px; overflow-x: auto; white-space: pre; line-height: 1.6; color: var(--blue); }
+  .recipients-select { min-height: 80px; }
+
+  /* File drop zone */
+  .drop-zone {
+    border: 2px dashed var(--border2); border-radius: 6px; padding: 24px; text-align: center;
+    cursor: pointer; transition: all 0.2s; position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--green); background: var(--green-dim); }
+  .drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .drop-zone .dz-icon { font-size: 24px; margin-bottom: 8px; }
+  .drop-zone .dz-label { font-size: 11px; color: var(--text-dim); }
+  .drop-zone .dz-hint { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+  .file-preview { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; margin-top: 8px; }
+  .file-preview .fp-icon { font-size: 18px; }
+  .file-preview .fp-info { flex: 1; }
+  .file-preview .fp-name { font-size: 11px; color: var(--text); }
+  .file-preview .fp-size { font-size: 10px; color: var(--text-muted); }
+  .file-preview .fp-remove { cursor: pointer; color: var(--red); font-size: 14px; padding: 2px 6px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">WA<span>/</span>NOTIFY</div>
+      <div class="status-pill">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">connecting...</span>
+      </div>
+    </div>
+    <nav>
+      <div class="nav-section">Monitor</div>
+      <div class="nav-item active" data-page="dashboard" onclick="showPage('dashboard', this)"><span class="icon">◈</span> Dashboard</div>
+      <div class="nav-item" data-page="logs" onclick="showPage('logs', this)"><span class="icon">≡</span> Message Logs</div>
+      <div class="nav-section">Send</div>
+      <div class="nav-item" data-page="send" onclick="showPage('send', this)"><span class="icon">↗</span> Send Message</div>
+      <div class="nav-item" data-page="templates" onclick="showPage('templates', this)"><span class="icon">⊞</span> Templates</div>
+      <div class="nav-section">Automation</div>
+      <div class="nav-item" data-page="webhooks" onclick="showPage('webhooks', this)"><span class="icon">⌁</span> Webhooks</div>
+      <div class="nav-item" data-page="schedules" onclick="showPage('schedules', this)"><span class="icon">◷</span> Schedules</div>
+      <div class="nav-item" data-page="reminders" onclick="showPage('reminders', this)"><span class="icon">◉</span> Reminders</div>
+      <div class="nav-section">Config</div>
+      <div class="nav-item" data-page="contacts" onclick="showPage('contacts', this)"><span class="icon">◎</span> Contacts</div>
+      <div class="nav-item" data-page="groups" onclick="showPage('groups', this)"><span class="icon">⊙</span> Groups</div>
+      <div class="nav-item" data-page="settings" onclick="showPage('settings', this)"><span class="icon">⚙</span> Settings</div>
+    </nav>
+    <div class="sidebar-footer">
+      <a onclick="showQR()">▣ Connect / Re-auth</a>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard">
+      <div class="page-header">
+        <div class="page-title">Dashboard</div>
+        <div class="page-sub">System overview and quick send</div>
+      </div>
+      <div class="grid-3" style="margin-bottom:16px">
+        <div class="stat-card"><div class="stat-label">Messages Sent</div><div class="stat-value green" id="stat-sent">—</div></div>
+        <div class="stat-card"><div class="stat-label">Failed</div><div class="stat-value red" id="stat-failed">—</div></div>
+        <div class="stat-card"><div class="stat-label">Active Automations</div><div class="stat-value" id="stat-auto">—</div></div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Quick Send</div>
+          <div class="form-group">
+            <label>Recipient (number or JID)</label>
+            <input id="qs-to" placeholder="2348012345678">
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Message</label>
+            <textarea id="qs-msg" placeholder="Type your message..."></textarea>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="quickSend()">Send ↗</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Recent Logs</div>
+          <div id="dash-logs"><div style="color:var(--text-muted);font-size:11px">Loading...</div></div>
+          <div style="margin-top:12px">
+            <button class="btn btn-secondary btn-sm" onclick="showPage('logs', null)">View all logs →</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Webhook Endpoint</div>
+        <p class="hint" style="margin-bottom:12px">POST to a webhook URL to send a WhatsApp message. All JSON fields in the body are available as <span class="code">{{variable}}</span> in the message template.</p>
+        <pre class="full-code" id="webhookExample">POST http://your-server:3000/webhook/{slug}
+Content-Type: application/json
+
+{ "status": "down", "host": "server01", "cpu": "98%" }
+
+Template message: "🚨 Alert: {{host}} is {{status}} — CPU at {{cpu}}"</pre>
+      </div>
+    </div>
+
+    <!-- LOGS -->
+    <div id="page-logs" class="hidden">
+      <div class="page-header"><div class="page-title">Message Logs</div><div class="page-sub">History of all sent messages</div></div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div class="card-title" style="margin:0">All Messages</div>
+          <button class="btn btn-danger btn-sm" onclick="clearLogs()">Clear all</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Time</th><th>Recipient</th><th>Message</th><th>Source</th><th>Status</th></tr></thead>
+            <tbody id="logs-table"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn btn-secondary btn-sm" id="logs-prev" onclick="loadLogs(-1)">← Prev</button>
+          <button class="btn btn-secondary btn-sm" id="logs-next" onclick="loadLogs(1)">Next →</button>
+          <span style="font-size:11px;color:var(--text-muted);align-self:center" id="logs-info"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEND -->
+    <div id="page-send" class="hidden">
+      <div class="page-header"><div class="page-title">Send Message</div><div class="page-sub">Send text, images, or files to contacts and groups</div></div>
+      <div class="card">
+        <div class="tabs">
+          <div class="tab active" onclick="switchTab('send', 'text', this)">Text</div>
+          <div class="tab" onclick="switchTab('send', 'file', this)">File / Image</div>
+          <div class="tab" onclick="switchTab('send', 'url', this)">URL</div>
+          <div class="tab" onclick="switchTab('send', 'template', this)">Template</div>
+        </div>
+
+        <!-- Text -->
+        <div id="send-text-panel">
+          <div class="form-row cols-2">
+            <div class="form-group">
+              <label>Recipients</label>
+              <select id="send-recipients" multiple class="recipients-select"></select>
+              <div class="hint">Hold Ctrl/Cmd for multiple</div>
+            </div>
+            <div class="form-group">
+              <label>Or custom number/JID</label>
+              <input id="send-custom" placeholder="2348012345678, or JID@g.us">
+              <div class="hint">Comma-separated for multiple</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Message</label>
+            <textarea id="send-msg" placeholder="Supports *bold*, _italic_, ~strikethrough~" style="min-height:100px"></textarea>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="sendText()">Send ↗</button></div>
+        </div>
+
+        <!-- File upload -->
+        <div id="send-file-panel" class="hidden">
+          <div class="form-row cols-2">
+            <div class="form-group">
+              <label>Recipients</label>
+              <select id="send-file-recipients" multiple class="recipients-select"></select>
+              <div class="hint">Hold Ctrl/Cmd for multiple</div>
+            </div>
+            <div class="form-group">
+              <label>Or custom number/JID</label>
+              <input id="send-file-custom" placeholder="2348012345678">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>File</label>
+            <div class="drop-zone" id="drop-zone" ondragover="dzDragOver(event)" ondragleave="dzDragLeave(event)" ondrop="dzDrop(event)">
+              <input type="file" id="file-input" onchange="fileSelected(this.files[0])">
+              <div class="dz-icon">📎</div>
+              <div class="dz-label">Drop file here or click to browse</div>
+              <div class="dz-hint">Images, video, audio, PDF, docs — up to 64MB</div>
+            </div>
+            <div id="file-preview" class="hidden"></div>
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Caption (optional)</label>
+            <input id="send-file-caption" placeholder="Add a caption...">
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="sendFile()">Send File ↗</button></div>
+        </div>
+
+        <!-- URL -->
+        <div id="send-url-panel" class="hidden">
+          <div class="form-row cols-2">
+            <div class="form-group">
+              <label>Recipients</label>
+              <select id="send-url-recipients" multiple class="recipients-select"></select>
+            </div>
+            <div class="form-group">
+              <label>Or custom number/JID</label>
+              <input id="send-url-custom" placeholder="2348012345678">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>File URL</label>
+            <input id="send-url-url" placeholder="https://example.com/image.jpg">
+            <div class="hint">URL to an image, video, audio, PDF or document. File type is detected from the extension.</div>
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Filename (optional, helps detect type)</label>
+            <input id="send-url-filename" placeholder="report.pdf">
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Caption (optional)</label>
+            <input id="send-url-caption" placeholder="Add a caption...">
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="sendURL()">Send ↗</button></div>
+        </div>
+
+        <!-- Template -->
+        <div id="send-template-panel" class="hidden">
+          <div class="form-row cols-2">
+            <div class="form-group">
+              <label>Recipients</label>
+              <select id="send-tpl-recipients" multiple class="recipients-select"></select>
+            </div>
+            <div class="form-group">
+              <label>Template</label>
+              <select id="send-tpl-select" onchange="loadTemplateVars()">
+                <option value="">Select a template...</option>
+              </select>
+              <div style="margin-top:8px;font-size:11px;color:var(--text-dim);background:var(--surface2);padding:10px;border-radius:4px;border:1px solid var(--border);min-height:40px;white-space:pre-wrap" id="tpl-preview"></div>
+            </div>
+          </div>
+          <div id="tpl-vars-wrap" class="form-row cols-3"></div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="sendWithTemplate()">Send with Template ↗</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEMPLATES -->
+    <div id="page-templates" class="hidden">
+      <div class="page-header"><div class="page-title">Templates</div><div class="page-sub">Reusable messages with {{variable}} substitution</div></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Create / Edit Template</div>
+          <input id="tpl-id" type="hidden">
+          <div class="form-group"><label>Name</label><input id="tpl-form-name" placeholder="e.g. server-alert"></div>
+          <div class="form-group" style="margin-top:10px"><label>Description</label><input id="tpl-form-desc" placeholder="What is this template for?"></div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Body</label>
+            <textarea id="tpl-form-body" placeholder="Use {{variable}} for substitution&#10;&#10;e.g. 🚨 {{host}} is down! Status: {{status}}" style="min-height:120px"></textarea>
+            <div class="hint">Supports *bold*, _italic_. Webhook body fields are automatically available as {{fieldName}}.</div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="saveTemplate()">Save Template</button>
+            <button class="btn btn-secondary" onclick="clearTemplateForm()">Clear</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Saved Templates</div>
+          <div id="templates-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WEBHOOKS -->
+    <div id="page-webhooks" class="hidden">
+      <div class="page-header"><div class="page-title">Webhooks</div><div class="page-sub">Named webhook endpoints — POST any JSON and send a WhatsApp message</div></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Create Webhook</div>
+          <input id="wh-id" type="hidden">
+          <div class="form-group"><label>Name</label><input id="wh-name" placeholder="Server alerts"></div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Slug (URL path)</label>
+            <input id="wh-slug" placeholder="server-alerts" oninput="updateSlugPreview()">
+            <div class="hint" id="wh-slug-preview" style="color:var(--blue)"></div>
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Recipients</label>
+            <select id="wh-recipients" multiple class="recipients-select"></select>
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Template (optional)</label>
+            <select id="wh-template"><option value="">None — use custom message</option></select>
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Custom Message</label>
+            <textarea id="wh-msg" placeholder="🚨 {{host}} is {{status}} — CPU: {{cpu}}" style="min-height:70px"></textarea>
+            <div class="hint">All JSON fields from the webhook body are available as {{fieldName}}. Nested fields: {{data.value}} or {{data_value}}.</div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="saveWebhook()">Save Webhook</button>
+            <button class="btn btn-secondary" onclick="clearWHForm()">Clear</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Active Webhooks</div>
+          <div id="webhooks-list"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Usage Examples</div>
+        <div class="grid-2">
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px">curl</div>
+            <pre class="full-code">curl -X POST http://your-server:3000/webhook/server-alerts \
+  -H "Content-Type: application/json" \
+  -d '{"host":"web01","status":"down","cpu":"98%"}'</pre>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px">Python</div>
+            <pre class="full-code">import requests
+requests.post(
+  "http://your-server:3000/webhook/server-alerts",
+  json={"host": "web01", "status": "down"}
+)</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCHEDULES -->
+    <div id="page-schedules" class="hidden">
+      <div class="page-header"><div class="page-title">Schedules</div><div class="page-sub">Cron-based automatic messages</div></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Create Schedule</div>
+          <input id="sched-id" type="hidden">
+          <div class="form-group"><label>Name</label><input id="sched-name" placeholder="Daily standup reminder"></div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Cron Expression</label>
+            <input id="sched-cron" placeholder="0 9 * * 1-5">
+            <div class="hint"><span class="code">0 9 * * 1-5</span> = 9am weekdays &nbsp; <span class="code">*/30 * * * *</span> = every 30min</div>
+          </div>
+          <div class="form-group" style="margin-top:10px"><label>Recipients</label><select id="sched-recipients" multiple class="recipients-select"></select></div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Template (optional)</label>
+            <select id="sched-template"><option value="">None — use custom message</option></select>
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Custom Message</label>
+            <textarea id="sched-msg" placeholder="Your scheduled message..." style="min-height:70px"></textarea>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="saveSchedule()">Save Schedule</button>
+            <button class="btn btn-secondary" onclick="clearSchedForm()">Clear</button>
+          </div>
+        </div>
+        <div class="card"><div class="card-title">Active Schedules</div><div id="schedules-list"></div></div>
+      </div>
+    </div>
+
+    <!-- REMINDERS -->
+    <div id="page-reminders" class="hidden">
+      <div class="page-header"><div class="page-title">Reminders</div><div class="page-sub">Recurring reminder messages</div></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Create Reminder</div>
+          <input id="rem-id" type="hidden">
+          <div class="form-row cols-2">
+            <div class="form-group"><label>Name</label><input id="rem-name" placeholder="Morning standup"></div>
+            <div class="form-group"><label>Time of Day</label><input id="rem-time" type="time" value="09:00"></div>
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Frequency</label>
+            <select id="rem-freq" onchange="toggleDays()">
+              <option value="daily">Daily</option>
+              <option value="weekdays">Weekdays (Mon–Fri)</option>
+              <option value="weekends">Weekends (Sat–Sun)</option>
+              <option value="weekly">Weekly (pick days)</option>
+              <option value="hourly">Hourly</option>
+            </select>
+          </div>
+          <div class="form-group hidden" id="rem-days-wrap" style="margin-top:10px">
+            <label>Days of Week</label>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+              <label style="display:flex;align-items:center;gap:4px;text-transform:none;font-size:11px"><input type="checkbox" value="1"> Mon</label>
+              <label style="display:flex;align-items:center;gap:4px;text-transform:none;font-size:11px"><input type="checkbox" value="2"> Tue</label>
+              <label style="display:flex;align-items:center;gap:4px;text-transform:none;font-size:11px"><input type="checkbox" value="3"> Wed</label>
+              <label style="display:flex;align-items:center;gap:4px;text-transform:none;font-size:11px"><input type="checkbox" value="4"> Thu</label>
+              <label style="display:flex;align-items:center;gap:4px;text-transform:none;font-size:11px"><input type="checkbox" value="5"> Fri</label>
+              <label style="display:flex;align-items:center;gap:4px;text-transform:none;font-size:11px"><input type="checkbox" value="6"> Sat</label>
+              <label style="display:flex;align-items:center;gap:4px;text-transform:none;font-size:11px"><input type="checkbox" value="0"> Sun</label>
+            </div>
+          </div>
+          <div class="form-group" style="margin-top:10px"><label>Recipients</label><select id="rem-recipients" multiple class="recipients-select"></select></div>
+          <div class="form-group" style="margin-top:10px"><label>Message</label><textarea id="rem-msg" placeholder="⏰ Reminder: standup starting!" style="min-height:70px"></textarea></div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="saveReminder()">Save Reminder</button>
+            <button class="btn btn-secondary" onclick="clearRemForm()">Clear</button>
+          </div>
+        </div>
+        <div class="card"><div class="card-title">Active Reminders</div><div id="reminders-list"></div></div>
+      </div>
+    </div>
+
+    <!-- CONTACTS -->
+    <div id="page-contacts" class="hidden">
+      <div class="page-header"><div class="page-title">Contacts</div><div class="page-sub">Manage recipient contacts</div></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Add / Edit Contact</div>
+          <input id="contact-id" type="hidden">
+          <div class="form-group"><label>Name</label><input id="contact-name" placeholder="John Doe"></div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Phone Number</label>
+            <input id="contact-number" placeholder="2348012345678">
+            <div class="hint">International format, no spaces or +</div>
+          </div>
+          <div class="form-group" style="margin-top:10px"><label>Notes (optional)</label><input id="contact-notes" placeholder="Admin, team lead..."></div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="saveContact()">Save Contact</button>
+            <button class="btn btn-secondary" onclick="clearContactForm()">Clear</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">All Contacts</div>
+          <table><thead><tr><th>Name</th><th>Number</th><th>Notes</th><th></th></tr></thead><tbody id="contacts-table"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- GROUPS -->
+    <div id="page-groups" class="hidden">
+      <div class="page-header"><div class="page-title">Groups</div><div class="page-sub">Manage WhatsApp group JIDs</div></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Add Group</div>
+          <div class="form-group"><label>Group Name</label><input id="group-name" placeholder="Dev Team"></div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Group JID</label>
+            <input id="group-jid" placeholder="120363XXXXXXXXXX@g.us">
+            <div class="hint">Find via WhatsApp Web URL or group info</div>
+          </div>
+          <div class="form-group" style="margin-top:10px"><label>Notes (optional)</label><input id="group-notes" placeholder="Dev alerts..."></div>
+          <div class="btn-row"><button class="btn btn-primary" onclick="saveGroup()">Save Group</button></div>
+        </div>
+        <div class="card">
+          <div class="card-title">All Groups</div>
+          <table><thead><tr><th>Name</th><th>JID</th><th>Notes</th><th></th></tr></thead><tbody id="groups-table"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="page-settings" class="hidden">
+      <div class="page-header"><div class="page-title">Settings</div><div class="page-sub">API key and connection</div></div>
+      <div class="card" style="max-width:540px">
+        <div class="card-title">API Authentication</div>
+        <div class="form-group">
+          <label>API Key</label>
+          <input id="setting-api-key" placeholder="your-secret-api-key">
+          <div class="hint">Used as <span class="code">x-api-key</span> header on <span class="code">POST /api/send</span> and <span class="code">POST /api/send-file</span></div>
+        </div>
+        <div class="btn-row"><button class="btn btn-primary" onclick="saveSettings()">Save Settings</button></div>
+      </div>
+      <div class="card" style="max-width:540px;margin-top:16px">
+        <div class="card-title">WhatsApp Connection</div>
+        <div style="margin-bottom:16px">
+          <div class="status-pill" style="font-size:12px"><div class="status-dot" id="settings-dot"></div><span id="settings-status">—</span></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-amber" onclick="showQR()">▣ Show QR / Re-auth</button>
+          <button class="btn btn-danger" onclick="logoutWA()">✕ Logout</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- QR Modal -->
+<div class="modal-overlay hidden" id="qr-modal" onclick="hideQR()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3>Scan QR Code</h3>
+    <p>Open WhatsApp → Linked Devices → Link a Device, then scan.</p>
+    <div id="qr-wrap"><img id="qr-img" src="" alt="QR Code"></div>
+    <div id="qr-wait" class="hidden" style="margin-top:16px;font-size:11px;color:var(--text-dim)">Waiting for QR code...</div>
+    <div class="btn-row" style="justify-content:center;margin-top:20px">
+      <button class="btn btn-secondary" onclick="hideQR()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = '/api';
+let logsOffset = 0;
+const logsLimit = 50;
+let selectedFile = null;
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function showPage(page, el) {
+  document.querySelectorAll('[id^="page-"]').forEach(e => e.classList.add('hidden'));
+  document.getElementById('page-' + page).classList.remove('hidden');
+  document.querySelectorAll('.nav-item').forEach(e => e.classList.remove('active'));
+  if (el) el.classList.add('active');
+  else document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
+  onPageLoad(page);
+}
+
+function onPageLoad(page) {
+  if (page === 'dashboard') { loadDashStats(); loadDashLogs(); }
+  if (page === 'logs') { logsOffset = 0; loadLogs(0); }
+  if (page === 'send') { populateRecipientSelects(['send-recipients','send-file-recipients','send-url-recipients','send-tpl-recipients']); populateTemplateSelects(['send-tpl-select']); }
+  if (page === 'templates') loadTemplates();
+  if (page === 'webhooks') { populateRecipientSelects(['wh-recipients']); populateTemplateSelects(['wh-template']); loadWebhooks(); }
+  if (page === 'schedules') { populateRecipientSelects(['sched-recipients']); populateTemplateSelects(['sched-template']); loadSchedules(); }
+  if (page === 'reminders') { populateRecipientSelects(['rem-recipients']); loadReminders(); }
+  if (page === 'contacts') loadContacts();
+  if (page === 'groups') loadGroups();
+  if (page === 'settings') loadSettings();
+}
+
+// ── Status polling ────────────────────────────────────────────────────────────
+async function pollStatus() {
+  try {
+    const d = await (await fetch(`${API}/status`)).json();
+    const s = d.status;
+    document.getElementById('statusDot').className = 'status-dot ' + s;
+    document.getElementById('statusText').textContent = s === 'connected' ? 'connected' : s === 'qr' ? 'scan QR' : s;
+    const sd = document.getElementById('settings-dot');
+    if (sd) { sd.className = 'status-dot ' + s; document.getElementById('settings-status').textContent = s; }
+    if (!document.getElementById('qr-modal').classList.contains('hidden')) {
+      if (s === 'qr' && d.qr) {
+        document.getElementById('qr-img').src = d.qr;
+        document.getElementById('qr-wrap').classList.remove('hidden');
+        document.getElementById('qr-wait').classList.add('hidden');
+      } else if (s === 'connected') { hideQR(); toast('✓ WhatsApp connected!', 'success'); }
+    }
+  } catch {}
+}
+setInterval(pollStatus, 3000);
+pollStatus();
+
+// ── QR ────────────────────────────────────────────────────────────────────────
+async function showQR() {
+  document.getElementById('qr-modal').classList.remove('hidden');
+  const d = await (await fetch(`${API}/status`)).json();
+  if (d.qr) {
+    document.getElementById('qr-img').src = d.qr;
+    document.getElementById('qr-wrap').classList.remove('hidden');
+    document.getElementById('qr-wait').classList.add('hidden');
+  } else {
+    document.getElementById('qr-wrap').classList.add('hidden');
+    document.getElementById('qr-wait').classList.remove('hidden');
+    document.getElementById('qr-wait').textContent = d.status === 'connected' ? '✓ Already connected' : 'Waiting for QR...';
+  }
+}
+function hideQR() { document.getElementById('qr-modal').classList.add('hidden'); }
+async function logoutWA() {
+  if (!confirm('Logout from WhatsApp?')) return;
+  await fetch(`${API}/logout`, { method: 'POST' });
+  toast('Logged out', 'success');
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  setTimeout(() => el.className = '', 3000);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const get = async p => (await fetch(API + p)).json();
+const post = async (p, d) => (await fetch(API + p, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(d) })).json();
+const put = async (p, d) => (await fetch(API + p, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(d) })).json();
+const del = async p => (await fetch(API + p, { method: 'DELETE' })).json();
+const truncate = (s, n=50) => s?.length > n ? s.slice(0,n)+'...' : s || '';
+function timeAgo(dt) {
+  const diff = Math.floor((Date.now() - new Date(dt+'Z')) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+  return new Date(dt+'Z').toLocaleDateString();
+}
+function getRecipients(selId, customId) {
+  const sel = [...(document.getElementById(selId)?.selectedOptions||[])].map(o=>o.value);
+  const cust = (document.getElementById(customId)?.value||'').split(',').map(s=>s.trim()).filter(Boolean);
+  return [...sel, ...cust];
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
+async function loadDashStats() {
+  const [logs, scheds, rems, whs] = await Promise.all([get('/logs?limit=1000'), get('/schedules'), get('/reminders'), get('/webhook-rules')]);
+  document.getElementById('stat-sent').textContent = logs.logs.filter(l=>l.status==='sent').length;
+  document.getElementById('stat-failed').textContent = logs.logs.filter(l=>l.status!=='sent').length;
+  document.getElementById('stat-auto').textContent = [...scheds,...rems,...whs].filter(x=>x.active).length;
+}
+async function loadDashLogs() {
+  const d = await get('/logs?limit=5');
+  const el = document.getElementById('dash-logs');
+  if (!d.logs.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:11px">No messages yet</div>'; return; }
+  el.innerHTML = d.logs.map(l=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:11px">
+        <span style="color:var(--text-dim)">${truncate(l.recipient,20)}</span>
+        <span style="color:var(--text-muted);margin:0 6px">→</span>
+        <span style="color:var(--text)">${truncate(l.message,30)}</span>
+      </div>
+      <span class="badge ${l.status==='sent'?'badge-green':'badge-red'}">${l.status}</span>
+    </div>`).join('');
+}
+
+// ── Quick Send ────────────────────────────────────────────────────────────────
+async function quickSend() {
+  const to = document.getElementById('qs-to').value.trim();
+  const message = document.getElementById('qs-msg').value.trim();
+  if (!to || !message) return toast('Fill in recipient and message', 'error');
+  const s = await get('/settings');
+  const r = await fetch(`${API}/send`, { method:'POST', headers:{'Content-Type':'application/json','x-api-key':s.api_key}, body:JSON.stringify({to,message}) });
+  const d = await r.json();
+  if (d.results) { toast('✓ Sent!', 'success'); document.getElementById('qs-msg').value=''; loadDashLogs(); loadDashStats(); }
+  else toast('Error: '+(d.error||'unknown'), 'error');
+}
+
+// ── Logs ──────────────────────────────────────────────────────────────────────
+async function loadLogs(dir=0) {
+  logsOffset = Math.max(0, logsOffset + dir * logsLimit);
+  const d = await get(`/logs?limit=${logsLimit}&offset=${logsOffset}`);
+  document.getElementById('logs-table').innerHTML = d.logs.map(l=>`
+    <tr>
+      <td style="white-space:nowrap;font-size:10px">${timeAgo(l.created_at)}</td>
+      <td style="font-size:10px">${truncate(l.recipient,25)}</td>
+      <td style="max-width:300px;font-size:11px">${truncate(l.message,60)}</td>
+      <td><span class="badge badge-dim">${l.source}</span></td>
+      <td><span class="badge ${l.status==='sent'?'badge-green':'badge-red'}">${l.status}</span></td>
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px">No messages</td></tr>';
+  document.getElementById('logs-info').textContent = `${logsOffset+1}–${Math.min(logsOffset+logsLimit,d.total)} of ${d.total}`;
+  document.getElementById('logs-prev').disabled = logsOffset===0;
+  document.getElementById('logs-next').disabled = logsOffset+logsLimit>=d.total;
+}
+async function clearLogs() { if(!confirm('Clear all logs?')) return; await del('/logs'); toast('Logs cleared','success'); loadLogs(0); }
+
+// ── Send tabs ─────────────────────────────────────────────────────────────────
+function switchTab(page, tab, el) {
+  document.querySelectorAll(`#page-${page} .tab`).forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['text','file','url','template'].forEach(t => {
+    const p = document.getElementById(`send-${t}-panel`);
+    if (p) p.classList.toggle('hidden', t!==tab);
+  });
+}
+
+async function sendText() {
+  const recipients = getRecipients('send-recipients','send-custom');
+  const message = document.getElementById('send-msg').value.trim();
+  if (!recipients.length) return toast('Select at least one recipient','error');
+  if (!message) return toast('Enter a message','error');
+  const s = await get('/settings');
+  const r = await fetch(`${API}/send`, { method:'POST', headers:{'Content-Type':'application/json','x-api-key':s.api_key}, body:JSON.stringify({to:recipients,message}) });
+  const d = await r.json();
+  if (d.results) toast(`✓ Sent to ${d.results.length} recipient(s)`,'success');
+  else toast('Error: '+(d.error||'unknown'),'error');
+}
+
+async function sendFile() {
+  const recipients = getRecipients('send-file-recipients','send-file-custom');
+  const caption = document.getElementById('send-file-caption').value.trim();
+  if (!recipients.length) return toast('Select at least one recipient','error');
+  if (!selectedFile) return toast('Select a file','error');
+  const s = await get('/settings');
+  const fd = new FormData();
+  recipients.forEach(r => fd.append('to', r));
+  fd.append('file', selectedFile);
+  fd.append('caption', caption);
+  try {
+    const r = await fetch(`${API}/send-file`, { method:'POST', headers:{'x-api-key':s.api_key}, body:fd });
+    const d = await r.json();
+    if (d.results) toast(`✓ File sent to ${d.results.length} recipient(s)`,'success');
+    else toast('Error: '+(d.error||'unknown'),'error');
+  } catch(e) { toast('Upload failed: '+e.message,'error'); }
+}
+
+async function sendURL() {
+  const recipients = getRecipients('send-url-recipients','send-url-custom');
+  const url = document.getElementById('send-url-url').value.trim();
+  const filename = document.getElementById('send-url-filename').value.trim();
+  const caption = document.getElementById('send-url-caption').value.trim();
+  if (!recipients.length) return toast('Select at least one recipient','error');
+  if (!url) return toast('Enter a URL','error');
+  const s = await get('/settings');
+  const r = await fetch(`${API}/send`, { method:'POST', headers:{'Content-Type':'application/json','x-api-key':s.api_key}, body:JSON.stringify({to:recipients,url,filename,caption}) });
+  const d = await r.json();
+  if (d.results) toast(`✓ Sent to ${d.results.length} recipient(s)`,'success');
+  else toast('Error: '+(d.error||'unknown'),'error');
+}
+
+function loadTemplateVars() {
+  const id = document.getElementById('send-tpl-select').value;
+  document.getElementById('tpl-vars-wrap').innerHTML = '';
+  document.getElementById('tpl-preview').textContent = '';
+  if (!id) return;
+  get('/templates').then(tpls => {
+    const tpl = tpls.find(t=>t.id==id);
+    if (!tpl) return;
+    document.getElementById('tpl-preview').textContent = tpl.body;
+    const vars = [...new Set([...tpl.body.matchAll(/\{\{(\w+)\}\}/g)].map(m=>m[1]))];
+    document.getElementById('tpl-vars-wrap').innerHTML = vars.map(v=>`
+      <div class="form-group"><label>${v}</label><input class="tpl-var" data-var="${v}" placeholder="${v}"></div>`).join('');
+  });
+}
+
+async function sendWithTemplate() {
+  const tplId = document.getElementById('send-tpl-select').value;
+  if (!tplId) return toast('Select a template','error');
+  const tpls = await get('/templates');
+  const tpl = tpls.find(t=>t.id==tplId);
+  const recipients = [...(document.getElementById('send-tpl-recipients')?.selectedOptions||[])].map(o=>o.value);
+  if (!recipients.length) return toast('Select at least one recipient','error');
+  const vars = {};
+  document.querySelectorAll('.tpl-var').forEach(el=>{ vars[el.dataset.var]=el.value; });
+  const s = await get('/settings');
+  const r = await fetch(`${API}/send`, { method:'POST', headers:{'Content-Type':'application/json','x-api-key':s.api_key}, body:JSON.stringify({to:recipients,template:tpl.name,vars}) });
+  const d = await r.json();
+  if (d.results) toast(`✓ Sent to ${d.results.length} recipient(s)`,'success');
+  else toast('Error: '+(d.error||'unknown'),'error');
+}
+
+// ── File drag/drop ────────────────────────────────────────────────────────────
+function dzDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over'); }
+function dzDragLeave() { document.getElementById('drop-zone').classList.remove('drag-over'); }
+function dzDrop(e) { e.preventDefault(); dzDragLeave(); const f = e.dataTransfer.files[0]; if (f) fileSelected(f); }
+function fileSelected(file) {
+  selectedFile = file;
+  const icons = { image:'🖼️', video:'🎬', audio:'🎵', application:'📄', text:'📝' };
+  const icon = icons[file.type.split('/')[0]] || '📎';
+  const size = file.size < 1024*1024 ? `${(file.size/1024).toFixed(1)} KB` : `${(file.size/1024/1024).toFixed(1)} MB`;
+  const el = document.getElementById('file-preview');
+  el.className = 'file-preview';
+  el.innerHTML = `<span class="fp-icon">${icon}</span><div class="fp-info"><div class="fp-name">${file.name}</div><div class="fp-size">${size} · ${file.type||'unknown'}</div></div><span class="fp-remove" onclick="clearFile()">✕</span>`;
+}
+function clearFile() { selectedFile = null; document.getElementById('file-preview').className='file-preview hidden'; document.getElementById('file-input').value=''; }
+
+// ── Templates ─────────────────────────────────────────────────────────────────
+async function loadTemplates() {
+  const tpls = await get('/templates');
+  const el = document.getElementById('templates-list');
+  if (!tpls.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:11px">No templates yet</div>'; return; }
+  el.innerHTML = tpls.map(t=>`
+    <div style="border:1px solid var(--border);border-radius:4px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1;margin-right:10px">
+          <div style="font-size:12px;font-weight:500;color:var(--text)">${t.name}</div>
+          ${t.description?`<div style="font-size:10px;color:var(--text-muted);margin-top:2px">${t.description}</div>`:''}
+          <div style="font-size:11px;color:var(--text-dim);margin-top:6px;white-space:pre-wrap">${truncate(t.body,100)}</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-secondary btn-sm" onclick="editTemplate(${t.id})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteTemplate(${t.id})">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+async function saveTemplate() {
+  const id = document.getElementById('tpl-id').value;
+  const name = document.getElementById('tpl-form-name').value.trim();
+  const body = document.getElementById('tpl-form-body').value.trim();
+  const description = document.getElementById('tpl-form-desc').value.trim();
+  if (!name||!body) return toast('Name and body required','error');
+  if (id) await put(`/templates/${id}`,{name,body,description});
+  else await post('/templates',{name,body,description});
+  toast('✓ Template saved','success'); clearTemplateForm(); loadTemplates();
+}
+async function editTemplate(id) {
+  const t = (await get('/templates')).find(x=>x.id===id);
+  document.getElementById('tpl-id').value=t.id;
+  document.getElementById('tpl-form-name').value=t.name;
+  document.getElementById('tpl-form-desc').value=t.description||'';
+  document.getElementById('tpl-form-body').value=t.body;
+}
+async function deleteTemplate(id) { if(!confirm('Delete?')) return; await del(`/templates/${id}`); toast('Deleted','success'); loadTemplates(); }
+function clearTemplateForm() { ['tpl-id','tpl-form-name','tpl-form-desc','tpl-form-body'].forEach(id=>document.getElementById(id).value=''); }
+
+// ── Webhooks ──────────────────────────────────────────────────────────────────
+function updateSlugPreview() {
+  const slug = document.getElementById('wh-slug').value.toLowerCase().replace(/[^a-z0-9-_]/g,'-');
+  document.getElementById('wh-slug-preview').textContent = slug ? `→ POST /webhook/${slug}` : '';
+}
+async function loadWebhooks() {
+  const rules = await get('/webhook-rules');
+  const el = document.getElementById('webhooks-list');
+  if (!rules.length) { el.innerHTML = '<div style="color:var(--text-muted);font-size:11px">No webhooks yet</div>'; return; }
+  el.innerHTML = rules.map(r=>`
+    <div style="border:1px solid var(--border);border-radius:4px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1;margin-right:8px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:500;color:var(--text)">${r.name}</span>
+            <span class="badge ${r.active?'badge-green':'badge-dim'}">${r.active?'active':'off'}</span>
+          </div>
+          <div style="margin-top:4px"><span class="code" style="font-size:10px">/webhook/${r.slug}</span></div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px">
+            Triggered ${r.trigger_count||0}×${r.last_triggered?' · last: '+timeAgo(r.last_triggered):''}
+          </div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:4px">${truncate(r.custom_message||'(template)',60)}</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-amber btn-sm" onclick="toggleWebhook(${r.id},${r.active})">${r.active?'⏸':'▶'}</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteWebhook(${r.id})">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+async function saveWebhook() {
+  const id = document.getElementById('wh-id').value;
+  const name = document.getElementById('wh-name').value.trim();
+  const slug = document.getElementById('wh-slug').value.trim();
+  const recipients = [...(document.getElementById('wh-recipients')?.selectedOptions||[])].map(o=>o.value);
+  const template_id = document.getElementById('wh-template').value||null;
+  const custom_message = document.getElementById('wh-msg').value.trim();
+  if (!name||!slug||!recipients.length) return toast('Name, slug and recipients required','error');
+  if (!custom_message&&!template_id) return toast('Provide a message or template','error');
+  if (id) await put(`/webhook-rules/${id}`,{name,slug,recipients,template_id,custom_message});
+  else await post('/webhook-rules',{name,slug,recipients,template_id,custom_message});
+  toast('✓ Webhook saved','success'); clearWHForm(); loadWebhooks();
+}
+async function toggleWebhook(id,active) { await put(`/webhook-rules/${id}`,{active:active?0:1}); loadWebhooks(); }
+async function deleteWebhook(id) { if(!confirm('Delete?')) return; await del(`/webhook-rules/${id}`); toast('Deleted','success'); loadWebhooks(); }
+function clearWHForm() { ['wh-id','wh-name','wh-slug','wh-msg'].forEach(id=>document.getElementById(id).value=''); updateSlugPreview(); }
+
+// ── Schedules ─────────────────────────────────────────────────────────────────
+async function loadSchedules() {
+  const s = await get('/schedules');
+  const el = document.getElementById('schedules-list');
+  if (!s.length) { el.innerHTML='<div style="color:var(--text-muted);font-size:11px">No schedules yet</div>'; return; }
+  el.innerHTML = s.map(s=>`
+    <div style="border:1px solid var(--border);border-radius:4px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;font-weight:500;color:var(--text)">${s.name}</span>
+            <span class="badge ${s.active?'badge-green':'badge-dim'}">${s.active?'active':'paused'}</span>
+          </div>
+          <div class="code" style="font-size:10px;margin-top:4px;display:inline-block">${s.cron_expr}</div>
+          ${s.last_run?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px">Last run: ${timeAgo(s.last_run)}</div>`:''}
+        </div>
+        <div class="actions">
+          <button class="btn btn-amber btn-sm" onclick="toggleSchedule(${s.id},${s.active})">${s.active?'⏸':'▶'}</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteSchedule(${s.id})">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+async function saveSchedule() {
+  const id = document.getElementById('sched-id').value;
+  const name = document.getElementById('sched-name').value.trim();
+  const cron_expr = document.getElementById('sched-cron').value.trim();
+  const recipients = [...(document.getElementById('sched-recipients')?.selectedOptions||[])].map(o=>o.value);
+  const template_id = document.getElementById('sched-template').value||null;
+  const custom_message = document.getElementById('sched-msg').value.trim();
+  if (!name||!cron_expr||!recipients.length) return toast('Name, cron and recipients required','error');
+  if (id) await put(`/schedules/${id}`,{name,cron_expr,template_id,recipients,custom_message});
+  else await post('/schedules',{name,cron_expr,template_id,recipients,custom_message});
+  toast('✓ Schedule saved','success'); clearSchedForm(); loadSchedules();
+}
+async function toggleSchedule(id,active) { await put(`/schedules/${id}`,{active:active?0:1}); loadSchedules(); }
+async function deleteSchedule(id) { if(!confirm('Delete?')) return; await del(`/schedules/${id}`); toast('Deleted','success'); loadSchedules(); }
+function clearSchedForm() { ['sched-id','sched-name','sched-cron','sched-msg'].forEach(id=>document.getElementById(id).value=''); }
+
+// ── Reminders ─────────────────────────────────────────────────────────────────
+function toggleDays() { document.getElementById('rem-days-wrap').classList.toggle('hidden', document.getElementById('rem-freq').value!=='weekly'); }
+async function loadReminders() {
+  const r = await get('/reminders');
+  const el = document.getElementById('reminders-list');
+  if (!r.length) { el.innerHTML='<div style="color:var(--text-muted);font-size:11px">No reminders yet</div>'; return; }
+  el.innerHTML = r.map(r=>`
+    <div style="border:1px solid var(--border);border-radius:4px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;font-weight:500;color:var(--text)">${r.name}</span>
+            <span class="badge ${r.active?'badge-green':'badge-dim'}">${r.active?'active':'paused'}</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px">${r.frequency} at ${r.time_of_day}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${truncate(r.message,60)}</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-amber btn-sm" onclick="toggleReminder(${r.id},${r.active})">${r.active?'⏸':'▶'}</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteReminder(${r.id})">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+async function saveReminder() {
+  const id = document.getElementById('rem-id').value;
+  const name = document.getElementById('rem-name').value.trim();
+  const message = document.getElementById('rem-msg').value.trim();
+  const recipients = [...(document.getElementById('rem-recipients')?.selectedOptions||[])].map(o=>o.value);
+  const frequency = document.getElementById('rem-freq').value;
+  const time_of_day = document.getElementById('rem-time').value;
+  const days_of_week = [...document.querySelectorAll('#rem-days-wrap input:checked')].map(c=>parseInt(c.value));
+  if (!name||!message||!recipients.length) return toast('Name, message and recipients required','error');
+  if (id) await put(`/reminders/${id}`,{name,message,recipients,frequency,time_of_day,days_of_week});
+  else await post('/reminders',{name,message,recipients,frequency,time_of_day,days_of_week});
+  toast('✓ Reminder saved','success'); clearRemForm(); loadReminders();
+}
+async function toggleReminder(id,active) { await put(`/reminders/${id}`,{active:active?0:1}); loadReminders(); }
+async function deleteReminder(id) { if(!confirm('Delete?')) return; await del(`/reminders/${id}`); toast('Deleted','success'); loadReminders(); }
+function clearRemForm() { ['rem-id','rem-name','rem-msg'].forEach(id=>document.getElementById(id).value=''); document.getElementById('rem-time').value='09:00'; }
+
+// ── Contacts ──────────────────────────────────────────────────────────────────
+async function loadContacts() {
+  const c = await get('/contacts');
+  document.getElementById('contacts-table').innerHTML = c.map(c=>`
+    <tr>
+      <td>${c.name}</td><td style="font-size:10px">${c.number}</td>
+      <td style="color:var(--text-muted)">${c.notes||'—'}</td>
+      <td><div class="actions">
+        <button class="btn btn-secondary btn-sm" onclick="editContact(${c.id})">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteContact(${c.id})">✕</button>
+      </div></td>
+    </tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px">No contacts</td></tr>';
+}
+async function saveContact() {
+  const id = document.getElementById('contact-id').value;
+  const name = document.getElementById('contact-name').value.trim();
+  const number = document.getElementById('contact-number').value.trim();
+  const notes = document.getElementById('contact-notes').value.trim();
+  if (!name||!number) return toast('Name and number required','error');
+  if (id) await put(`/contacts/${id}`,{name,number,notes});
+  else await post('/contacts',{name,number,notes});
+  toast('✓ Contact saved','success'); clearContactForm(); loadContacts();
+}
+async function editContact(id) {
+  const c = (await get('/contacts')).find(x=>x.id===id);
+  document.getElementById('contact-id').value=c.id;
+  document.getElementById('contact-name').value=c.name;
+  document.getElementById('contact-number').value=c.number;
+  document.getElementById('contact-notes').value=c.notes||'';
+}
+async function deleteContact(id) { if(!confirm('Delete?')) return; await del(`/contacts/${id}`); toast('Deleted','success'); loadContacts(); }
+function clearContactForm() { ['contact-id','contact-name','contact-number','contact-notes'].forEach(id=>document.getElementById(id).value=''); }
+
+// ── Groups ────────────────────────────────────────────────────────────────────
+async function loadGroups() {
+  const g = await get('/groups');
+  document.getElementById('groups-table').innerHTML = g.map(g=>`
+    <tr>
+      <td>${g.name}</td><td style="font-size:10px">${g.jid}</td>
+      <td style="color:var(--text-muted)">${g.notes||'—'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteGroup(${g.id})">✕</button></td>
+    </tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:20px">No groups</td></tr>';
+}
+async function saveGroup() {
+  const name=document.getElementById('group-name').value.trim();
+  const jid=document.getElementById('group-jid').value.trim();
+  const notes=document.getElementById('group-notes').value.trim();
+  if (!name||!jid) return toast('Name and JID required','error');
+  await post('/groups',{name,jid,notes});
+  toast('✓ Group saved','success');
+  ['group-name','group-jid','group-notes'].forEach(id=>document.getElementById(id).value='');
+  loadGroups();
+}
+async function deleteGroup(id) { if(!confirm('Delete?')) return; await del(`/groups/${id}`); toast('Deleted','success'); loadGroups(); }
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+async function loadSettings() {
+  const s = await get('/settings');
+  document.getElementById('setting-api-key').value = s.api_key||'';
+}
+async function saveSettings() {
+  await put('/settings', { api_key: document.getElementById('setting-api-key').value });
+  toast('✓ Settings saved','success');
+}
+
+// ── Recipient/template selects ────────────────────────────────────────────────
+async function populateRecipientSelects(ids) {
+  const [contacts, groups] = await Promise.all([get('/contacts'), get('/groups')]);
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const prev = [...el.selectedOptions].map(o=>o.value);
+    el.innerHTML = '';
+    if (contacts.length) {
+      const og = document.createElement('optgroup'); og.label='Contacts';
+      contacts.forEach(c=>{ const o=document.createElement('option'); o.value=c.number; o.textContent=`${c.name} (${c.number})`; if(prev.includes(c.number))o.selected=true; og.appendChild(o); });
+      el.appendChild(og);
+    }
+    if (groups.length) {
+      const og = document.createElement('optgroup'); og.label='Groups';
+      groups.forEach(g=>{ const o=document.createElement('option'); o.value=g.jid; o.textContent=`${g.name} (group)`; if(prev.includes(g.jid))o.selected=true; og.appendChild(o); });
+      el.appendChild(og);
+    }
+  }
+}
+async function populateTemplateSelects(ids) {
+  const tpls = await get('/templates');
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const first = el.options[0];
+    el.innerHTML = '';
+    if (first) el.appendChild(first);
+    tpls.forEach(t=>{ const o=document.createElement('option'); o.value=t.id; o.textContent=t.name; el.appendChild(o); });
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadSettings().then(() => {
+  document.getElementById('webhookExample').textContent =
+`POST http://your-server:3000/webhook/{slug}
+Content-Type: application/json
+
+{ "status": "down", "host": "server01", "cpu": "98%" }
+
+Template message: "🚨 Alert: {{host}} is {{status}} — CPU at {{cpu}}"`;
+});
+onPageLoad('dashboard');
+</script>
+</body>
+</html>
