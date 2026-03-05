@@ -200,7 +200,7 @@ Once saved, the group appears alongside contacts in every recipient dropdown.
 
 <!-- TODO: Replace with video embed or link once recorded -->
 
-> 🎬 ![Video](docs/video.mp4) — Here's a short video showing exactly how to find your WhatsApp Group JID.
+> 🎬 ![Video](https://github.com/CyberMask367/wa-notifier/blob/main/docs/video.mp4) — Here's a short video showing exactly how to find your WhatsApp Group JID.
 ---
 
 ## REST API
