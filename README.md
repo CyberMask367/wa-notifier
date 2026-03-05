@@ -199,7 +199,7 @@ Once saved, the group appears alongside contacts in every recipient dropdown.
 #### How to find your Group JID
 
 > Here's a short video showing exactly how to find your WhatsApp Group JID.
-![Video](https://github.com/user-attachments/assets/7f5f6827-8fb5-438e-b5ed-32dd0dbd5110)
+https://github.com/user-attachments/assets/7f5f6827-8fb5-438e-b5ed-32dd0dbd5110
 ---
 
 ## REST API
