@@ -37,7 +37,7 @@ Copy the following into a `docker-compose.yml` file, then run `docker compose up
 ```yaml
 services:
   wa-notifier:
-    image: your-dockerhub-username/wa-notifier:latest
+    image: cybermask367/wa-notifier:latest
     container_name: wa-notifier
     restart: unless-stopped
     ports:
@@ -64,7 +64,7 @@ docker run -d \
   --name wa-notifier \
   --restart unless-stopped \
   -p 3000:3000 \
-  -v /DATA/AppData/wa-notifier/data:/data \
+  -v $DATA_DIR:/data \
   -e PORT=3000 \
   -e DATA_DIR=/data \
   -e SESSION_DIR=/data/session \
