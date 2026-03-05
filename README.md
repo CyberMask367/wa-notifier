@@ -4,7 +4,7 @@ A self-hosted WhatsApp notification hub with a web UI, REST API, webhooks, sched
 
 Built on [Baileys](https://github.com/WhiskeySockets/Baileys), it links to your personal WhatsApp account via QR code, exactly like WhatsApp Web.
 
-![Dashboard](https://img.shields.io/badge/UI-dark%20terminal-00e676?style=flat-square)
+![Dashboard](docs/overview.png)
 
 ---
 
