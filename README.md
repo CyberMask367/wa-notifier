@@ -372,9 +372,9 @@ WA Notifier includes a dedicated handler for [Jellyfin](https://jellyfin.org/) w
 
 1. In Jellyfin, install the **Webhook** plugin
 2. Add a new webhook destination pointing to:
-   ```
+```
   http://your-server:3000/jellyfin
-  ```
+```
   and make sure **Send All Properties** enabled
    
 3. In the WA Notifier web UI, go to `🎬 Jellyfin` under Automations category and create rules based on events with your recipients and message or templates
