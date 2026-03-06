@@ -373,30 +373,21 @@ WA Notifier includes a dedicated handler for [Jellyfin](https://jellyfin.org/) w
 1. In Jellyfin, install the **Webhook** plugin
 2. Add a new webhook destination pointing to:
    ```
-   http://your-server:3000/webhook/jellyfin
-   ```
-3. In the WA Notifier web UI, create a `jellyfin` webhook rule with your recipients and message
+  http://your-server:3000/jellyfin
+  ```
+  and make sure **Send All Properties** enabled
+   
+3. In the WA Notifier web UI, go to `🎬 Jellyfin` under Automations category and create rules based on events with your recipients and message or templates
 
-### Available template variables for Jellyfin
+### Available Jellyfin Variables
 
-| Variable | Description |
-|---|---|
-| `{{event}}` | Event type (e.g. `playback_start`, `item_added`) |
-| `{{user}}` | Username who triggered the event |
-| `{{title}}` | Episode or item title |
-| `{{series}}` | Series name (for TV shows) |
-| `{{season}}` | Season number (e.g. `S01`) |
-| `{{episode}}` | Episode number (e.g. `E03`) |
-| `{{episode_title}}` | Formatted as `Series S01E03` |
-| `{{type}}` | Item type (Movie, Episode, etc.) |
-| `{{year}}` | Production year |
-| `{{server}}` | Jellyfin server name |
-| `{{device}}` | Device name |
-| `{{time}}` / `{{date}}` | Current time and date |
+All avaliable Variables are displayed on the Jellyfin page on the web UI.
+
+You can use Variables to create messages or templates for WA Notifier. You can copy and paste from my ready made [Templates](/docs/templates) and add them via the Templates page in the UI.
 
 **Example template:**
 ```
-🎬 {{user}} started watching {{episode_title}} on {{device}}
+🎬 {{ClientName}} started watching {{Name}} on {{DeviceName}}
 ```
 
 ### Debug endpoint
@@ -404,11 +395,11 @@ WA Notifier includes a dedicated handler for [Jellyfin](https://jellyfin.org/) w
 To see the raw payload and parsed variables from Jellyfin:
 
 ```bash
-curl -X POST http://your_ip_address:3000/webhook/jellyfin/debug \
+curl -X POST http://your_ip_address:3000/jellyfin/debug \
   -H "Content-Type: application/json" \
   -d @jellyfin-payload.json
 ```
-
+then check the container logs.
 ---
 
 ## Schedules

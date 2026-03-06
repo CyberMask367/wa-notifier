@@ -1,0 +1,8 @@
+🎵 *Now Playing*
+
+🎶 {{Name}}
+💿 {{Album}}
+🎤 {{Artist}}
+👤 {{NotificationUsername}} on {{DeviceName}}
+📱 {{ClientName}} · {{PlayMethod}}
+🖥️ {{ServerName}}

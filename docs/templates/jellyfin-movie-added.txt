@@ -1,0 +1,6 @@
+📥 *New Movie on {{ServerName}}*
+
+🎬 {{Name}} ({{Year}})
+🎭 {{Genres}}
+📝 {{Overview}}
+⏱️ {{RunTime}}

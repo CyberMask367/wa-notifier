@@ -1,0 +1,8 @@
+▶️ *Now Watching*
+
+📺 {{SeriesName}}
+🔢 S{{SeasonNumber00}}E{{EpisodeNumber00}} — {{Name}}
+👤 {{NotificationUsername}}
+📱 {{ClientName}} on {{DeviceName}}
+⚙️ {{PlayMethod}} · {{RunTime}}
+🖥️ {{ServerName}}

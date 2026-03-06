@@ -1,0 +1,6 @@
+📥 *New Episode on {{ServerName}}*
+
+📺 {{SeriesName}}
+🔢 S{{SeasonNumber00}}E{{EpisodeNumber00}} — {{Name}}
+🎭 {{Genres}}
+📝 {{Overview}}

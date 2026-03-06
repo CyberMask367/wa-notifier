@@ -164,7 +164,19 @@ async function sendToRecipients(recipients, opts) {
       await sendMessage(r, opts);
       results.push({ recipient: r, status: 'sent' });
     } catch (err) {
-      results.push({ recipient: r, status: 'failed', error: err.message });
+      // If media send failed, fall back to plain text caption
+      const caption = typeof opts === 'object' ? (opts.caption || opts.text || '') : opts;
+      if (typeof opts === 'object' && (opts.url || opts.filePath) && caption) {
+        try {
+          console.log(`[WA] Media send failed for ${r}, falling back to text: ${err.message}`);
+          await sendMessage(r, caption);
+          results.push({ recipient: r, status: 'sent', note: 'text fallback' });
+        } catch (err2) {
+          results.push({ recipient: r, status: 'failed', error: err2.message });
+        }
+      } else {
+        results.push({ recipient: r, status: 'failed', error: err.message });
+      }
     }
   }
   return results;

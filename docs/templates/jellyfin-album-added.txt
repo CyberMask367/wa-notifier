@@ -1,0 +1,7 @@
+💿 *New Album on {{ServerName}}*
+
+💿 {{Name}}
+🎤 {{Artist}}
+🎭 {{Genres}}
+📅 {{Year}}
+⏱️ {{RunTime}}

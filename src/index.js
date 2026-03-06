@@ -6,13 +6,25 @@ const scheduler = require('./scheduler');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(express.json({ strict: false }));
+app.use(express.urlencoded({ extended: true }));
+// Catch Jellyfin sending text/plain or unknown content-type
+app.use((req, res, next) => {
+  if (req.is('text/*') || (!req.headers['content-type'] && req.method === 'POST')) {
+    let data = '';
+    req.on('data', chunk => data += chunk);
+    req.on('end', () => {
+      try { req.body = JSON.parse(data); } catch { req.body = { raw: data }; }
+      next();
+    });
+  } else next();
+});
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api', require('./routes/api'));
 app.use('/webhook', require('./routes/webhook'));
+app.use('/jellyfin', require('./routes/jellyfin'));
 
-// Catch-all for SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

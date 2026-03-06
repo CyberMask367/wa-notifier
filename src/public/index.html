@@ -152,6 +152,7 @@
       <div class="nav-item" data-page="webhooks" onclick="showPage('webhooks', this)"><span class="icon">⌁</span> Webhooks</div>
       <div class="nav-item" data-page="schedules" onclick="showPage('schedules', this)"><span class="icon">◷</span> Schedules</div>
       <div class="nav-item" data-page="reminders" onclick="showPage('reminders', this)"><span class="icon">◉</span> Reminders</div>
+      <div class="nav-item" data-page="jellyfin" onclick="showPage('jellyfin', this)"><span class="icon">🎬</span> Jellyfin</div>
       <div class="nav-section">Config</div>
       <div class="nav-item" data-page="contacts" onclick="showPage('contacts', this)"><span class="icon">◎</span> Contacts</div>
       <div class="nav-item" data-page="groups" onclick="showPage('groups', this)"><span class="icon">⊙</span> Groups</div>
@@ -502,6 +503,180 @@ requests.post(
       </div>
     </div>
 
+
+    <!-- JELLYFIN -->
+    <div id="page-jellyfin" class="hidden">
+      <div class="page-header"><div class="page-title">Jellyfin</div><div class="page-sub">Send WhatsApp notifications for Jellyfin events</div></div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-title">Setup</div>
+        <p class="hint" style="margin-bottom:10px">In Jellyfin go to <strong>Dashboard → Notifications → (your webhook plugin)</strong> and set the URL to:</p>
+        <pre class="full-code" id="jellyfin-url">http://your-server:3000/jellyfin</pre>
+        <p class="hint" style="margin-top:10px">Enable <strong>Send All Properties</strong> in the plugin so all variables are available. The poster image is sent automatically.</p>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-title">Create Rule</div>
+          <input id="jf-id" type="hidden">
+          <div class="form-group"><label>Name</label><input id="jf-name" placeholder="New episode alert"></div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Event Type</label>
+            <select id="jf-event">
+              <option value="*">* — All events</option>
+              <optgroup label="Item Added (by type)">
+                <option value="ItemAdded:Movie">ItemAdded:Movie</option>
+                <option value="ItemAdded:Episode">ItemAdded:Episode</option>
+                <option value="ItemAdded:Season">ItemAdded:Season</option>
+                <option value="ItemAdded:Series">ItemAdded:Series</option>
+                <option value="ItemAdded:Audio">ItemAdded:Audio</option>
+                <option value="ItemAdded:MusicAlbum">ItemAdded:MusicAlbum</option>
+                <option value="ItemAdded:Audio">ItemAdded:Audio</option>
+                <option value="ItemAdded">ItemAdded (any type)</option>
+              </optgroup>
+              <optgroup label="Playback Start (by type)">
+                <option value="PlaybackStart:Movie">PlaybackStart:Movie</option>
+                <option value="PlaybackStart:Episode">PlaybackStart:Episode</option>
+                <option value="PlaybackStart:Audio">PlaybackStart:Audio</option>
+                <option value="PlaybackStart:MusicAlbum">PlaybackStart:MusicAlbum</option>
+                <option value="PlaybackStart">PlaybackStart (any type)</option>
+              </optgroup>
+              <optgroup label="Playback Stop (by type)">
+                <option value="PlaybackStop:Movie">PlaybackStop:Movie</option>
+                <option value="PlaybackStop:Episode">PlaybackStop:Episode</option>
+                <option value="PlaybackStop:Audio">PlaybackStop:Audio</option>
+                <option value="PlaybackStop:MusicAlbum">PlaybackStop:MusicAlbum</option>
+                <option value="PlaybackStop">PlaybackStop (any type)</option>
+              </optgroup>
+              <optgroup label="Playback Progress">
+                <option value="PlaybackProgress:Movie">PlaybackProgress:Movie</option>
+                <option value="PlaybackProgress:Episode">PlaybackProgress:Episode</option>
+                <option value="PlaybackProgress">PlaybackProgress (any type)</option>
+              </optgroup>
+              <optgroup label="User Events">
+                <option value="UserCreated">UserCreated</option>
+                <option value="UserDeleted">UserDeleted</option>
+                <option value="UserLockedOut">UserLockedOut</option>
+                <option value="UserUpdated">UserUpdated</option>
+                <option value="AuthenticationSuccess">AuthenticationSuccess</option>
+                <option value="AuthenticationFailure">AuthenticationFailure</option>
+              </optgroup>
+              <optgroup label="Plugin Events">
+                <option value="PluginInstalled">PluginInstalled</option>
+                <option value="PluginUpdated">PluginUpdated</option>
+                <option value="PluginUninstalled">PluginUninstalled</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="form-group" style="margin-top:10px"><label>Recipients</label><select id="jf-recipients" multiple class="recipients-select"></select></div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Template (optional)</label>
+            <select id="jf-template"><option value="">None — use custom message</option></select>
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <label>Custom Message</label>
+            <textarea id="jf-msg" placeholder="▶️ {{NotificationUsername}} is watching {{Name}}" style="min-height:80px"></textarea>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="saveJFRule()">Save Rule</button>
+            <button class="btn btn-secondary" onclick="clearJFForm()">Clear</button>
+          </div>
+        </div>
+        <div class="card"><div class="card-title">Active Rules</div><div id="jf-rules-list"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Available Template Variables</div>
+        <p class="hint" style="margin-bottom:16px">Use these as <span class="code">{{VariableName}}</span> in your templates. Two extra vars are always added: <span class="code">{{poster_url}}</span> and <span class="code">{{item_url}}</span>.</p>
+        <div class="grid-2">
+          <div>
+            <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Server & User</div>
+            <table>
+              <thead><tr><th>Variable</th><th>Events</th></tr></thead>
+              <tbody>
+                <tr><td class="code">{{ServerName}}</td><td>All</td></tr>
+                <tr><td class="code">{{ServerUrl}}</td><td>All</td></tr>
+                <tr><td class="code">{{ServerId}}</td><td>All</td></tr>
+                <tr><td class="code">{{ServerVersion}}</td><td>All</td></tr>
+                <tr><td class="code">{{Timestamp}}</td><td>All</td></tr>
+                <tr><td class="code">{{NotificationType}}</td><td>All</td></tr>
+                <tr><td class="code">{{NotificationUsername}}</td><td>All</td></tr>
+                <tr><td class="code">{{UserId}}</td><td>All</td></tr>
+                <tr><td class="code">{{LastLoginDate}}</td><td>Auth success</td></tr>
+                <tr><td class="code">{{LastActivityDate}}</td><td>Auth, Playback</td></tr>
+                <tr><td class="code">{{DeviceName}}</td><td>Playback</td></tr>
+                <tr><td class="code">{{ClientName}}</td><td>Playback</td></tr>
+                <tr><td class="code">{{RemoteEndPoint}}</td><td>Playback, Auth</td></tr>
+                <tr><td class="code">{{DeviceId}}</td><td>Playback</td></tr>
+              </tbody>
+            </table>
+
+            <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin:16px 0 10px">Playback</div>
+            <table>
+              <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td class="code">{{PlayMethod}}</td><td>Transcode / DirectPlay / DirectStream</td></tr>
+                <tr><td class="code">{{PlaybackPosition}}</td><td>Current position hh:mm:ss</td></tr>
+                <tr><td class="code">{{PlaybackPositionTicks}}</td><td>Position in ticks</td></tr>
+                <tr><td class="code">{{RunTime}}</td><td>Total runtime hh:mm:ss</td></tr>
+                <tr><td class="code">{{RunTimeTicks}}</td><td>Runtime in ticks</td></tr>
+                <tr><td class="code">{{PlayedToCompletion}}</td><td>true/false — stop only</td></tr>
+                <tr><td class="code">{{IsPaused}}</td><td>true/false</td></tr>
+                <tr><td class="code">{{IsAutomated}}</td><td>true/false</td></tr>
+                <tr><td class="code">{{AudioStreamIndex}}</td><td>Audio stream index</td></tr>
+                <tr><td class="code">{{SubtitleStreamIndex}}</td><td>Subtitle stream index</td></tr>
+                <tr><td class="code">{{LastPlayedDate}}</td><td>Last played date</td></tr>
+                <tr><td class="code">{{PlayCount}}</td><td>Total play count</td></tr>
+                <tr><td class="code">{{Played}}</td><td>Fully played true/false</td></tr>
+                <tr><td class="code">{{Favorite}}</td><td>Favorited true/false</td></tr>
+                <tr><td class="code">{{Rating}}</td><td>User rating</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <div style="font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">Media Item</div>
+            <table>
+              <thead><tr><th>Variable</th><th>Description</th></tr></thead>
+              <tbody>
+                <tr><td class="code">{{Name}}</td><td>Title</td></tr>
+                <tr><td class="code">{{ItemId}}</td><td>Item ID</td></tr>
+                <tr><td class="code">{{ItemType}}</td><td>Movie / Episode / Season / Series / Audio</td></tr>
+                <tr><td class="code">{{Year}}</td><td>Production year</td></tr>
+                <tr><td class="code">{{Overview}}</td><td>Description</td></tr>
+                <tr><td class="code">{{Genres}}</td><td>Genres</td></tr>
+                <tr><td class="code">{{Tagline}}</td><td>Tagline</td></tr>
+                <tr><td class="code">{{PremiereDate}}</td><td>Premiere date</td></tr>
+                <tr><td class="code">{{RunTime}}</td><td>Runtime hh:mm:ss</td></tr>
+                <tr><td class="code">{{SeriesName}}</td><td>TV series name — episodes/seasons</td></tr>
+                <tr><td class="code">{{SeriesId}}</td><td>Series ID</td></tr>
+                <tr><td class="code">{{SeasonId}}</td><td>Season ID</td></tr>
+                <tr><td class="code">{{SeasonNumber}}</td><td>Season number</td></tr>
+                <tr><td class="code">{{SeasonNumber00}}</td><td>Season padded e.g. 01</td></tr>
+                <tr><td class="code">{{EpisodeNumber}}</td><td>Episode number</td></tr>
+                <tr><td class="code">{{EpisodeNumber00}}</td><td>Episode padded e.g. 03</td></tr>
+                <tr><td class="code">{{AirTime}}</td><td>Episode air time</td></tr>
+                <tr><td class="code">{{Album}}</td><td>Album name — audio only</td></tr>
+                <tr><td class="code">{{Artist}}</td><td>Artist — audio only</td></tr>
+                <tr><td class="code">{{Provider_imdb}}</td><td>IMDb ID</td></tr>
+                <tr><td class="code">{{Provider_tmdb}}</td><td>TMDb ID</td></tr>
+                <tr><td class="code">{{Provider_tvdb}}</td><td>TVDb ID</td></tr>
+                <tr><td class="code">{{Video_0_Codec}}</td><td>Video codec e.g. hevc</td></tr>
+                <tr><td class="code">{{Video_0_Width}}</td><td>Video width px</td></tr>
+                <tr><td class="code">{{Video_0_Height}}</td><td>Video height px</td></tr>
+                <tr><td class="code">{{Video_0_VideoRange}}</td><td>SDR / HDR</td></tr>
+                <tr><td class="code">{{Audio_0_Codec}}</td><td>Audio codec</td></tr>
+                <tr><td class="code">{{Audio_0_Channels}}</td><td>Audio channels</td></tr>
+                <tr><td class="code">{{Audio_0_Language}}</td><td>Audio language</td></tr>
+                <tr><td class="code">{{poster_url}}</td><td>⭐ Auto-built poster URL</td></tr>
+                <tr><td class="code">{{item_url}}</td><td>⭐ Auto-built Jellyfin link</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- CONTACTS -->
     <div id="page-contacts" class="hidden">
       <div class="page-header"><div class="page-title">Contacts</div><div class="page-sub">Manage recipient contacts</div></div>
@@ -572,6 +747,16 @@ requests.post(
           <button class="btn btn-danger" onclick="logoutWA()">✕ Logout</button>
         </div>
       </div>
+      <div class="card" style="max-width:540px;margin-top:16px">
+        <div class="card-title">About</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:28px;font-weight:600;color:var(--green)">v1.0</div>
+          <div>
+            <div style="font-size:12px;color:var(--text)">WA Notifier</div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:2px">WhatsApp notification hub</div>
+          </div>
+        </div>
+      </div>
     </div>
 
   </main>
@@ -616,6 +801,7 @@ function onPageLoad(page) {
   if (page === 'webhooks') { populateRecipientSelects(['wh-recipients']); populateTemplateSelects(['wh-template']); loadWebhooks(); }
   if (page === 'schedules') { populateRecipientSelects(['sched-recipients']); populateTemplateSelects(['sched-template']); loadSchedules(); }
   if (page === 'reminders') { populateRecipientSelects(['rem-recipients']); loadReminders(); }
+  if (page === 'jellyfin') { populateRecipientSelects(['jf-recipients']); populateTemplateSelects(['jf-template']); loadJFRules(); document.getElementById('jellyfin-url').textContent = `http://${window.location.host}/jellyfin`; }
   if (page === 'contacts') loadContacts();
   if (page === 'groups') loadGroups();
   if (page === 'settings') loadSettings();
@@ -1105,6 +1291,50 @@ async function populateTemplateSelects(ids) {
     tpls.forEach(t=>{ const o=document.createElement('option'); o.value=t.id; o.textContent=t.name; el.appendChild(o); });
   }
 }
+
+
+// ── Jellyfin Rules ────────────────────────────────────────────────────────────
+async function loadJFRules() {
+  const rules = await get('/jellyfin-rules');
+  const el = document.getElementById('jf-rules-list');
+  if (!rules.length) { el.innerHTML='<div style="color:var(--text-muted);font-size:11px">No rules yet</div>'; return; }
+  el.innerHTML = rules.map(r=>`
+    <div style="border:1px solid var(--border);border-radius:4px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1;margin-right:8px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:12px;font-weight:500;color:var(--text)">${r.name}</span>
+            <span class="badge badge-blue">${r.event_type}</span>
+            <span class="badge ${r.active?'badge-green':'badge-dim'}">${r.active?'active':'off'}</span>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px">
+            Triggered ${r.trigger_count||0}×${r.last_triggered?' · last: '+timeAgo(r.last_triggered):''}
+          </div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:4px">${truncate(r.custom_message||'(template)',60)}</div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-amber btn-sm" onclick="toggleJFRule(${r.id},${r.active})">${r.active?'⏸':'▶'}</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteJFRule(${r.id})">✕</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+async function saveJFRule() {
+  const id = document.getElementById('jf-id').value;
+  const name = document.getElementById('jf-name').value.trim();
+  const event_type = document.getElementById('jf-event').value;
+  const recipients = [...(document.getElementById('jf-recipients')?.selectedOptions||[])].map(o=>o.value);
+  const template_id = document.getElementById('jf-template').value||null;
+  const custom_message = document.getElementById('jf-msg').value.trim();
+  if (!name||!recipients.length) return toast('Name and recipients required','error');
+  if (!custom_message&&!template_id) return toast('Provide a message or template','error');
+  if (id) await put(`/jellyfin-rules/${id}`,{name,event_type,recipients,template_id,custom_message});
+  else await post('/jellyfin-rules',{name,event_type,recipients,template_id,custom_message});
+  toast('✓ Rule saved','success'); clearJFForm(); loadJFRules();
+}
+async function toggleJFRule(id,active) { await put(`/jellyfin-rules/${id}`,{active:active?0:1}); loadJFRules(); }
+async function deleteJFRule(id) { if(!confirm('Delete?')) return; await del(`/jellyfin-rules/${id}`); toast('Deleted','success'); loadJFRules(); }
+function clearJFForm() { ['jf-id','jf-name','jf-msg'].forEach(id=>document.getElementById(id).value=''); }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 loadSettings().then(() => {

@@ -1,0 +1,7 @@
+▶️ *Now Watching*
+
+🎬 {{Name}} ({{Year}})
+👤 {{NotificationUsername}}
+📱 {{ClientName}} on {{DeviceName}}
+⚙️ {{PlayMethod}} · {{RunTime}}
+🖥️ {{ServerName}}

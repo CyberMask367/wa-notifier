@@ -1,0 +1,9 @@
+⏹️ *Stopped Playing*
+
+🎶 {{Name}}
+💿 {{Album}}
+🎤 {{Artist}}
+👤 {{NotificationUsername}} on {{DeviceName}}
+⏱️ {{PlaybackPosition}} / {{RunTime}}
+✅ Completed: {{PlayedToCompletion}}
+🖥️ {{ServerName}}

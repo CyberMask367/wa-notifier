@@ -76,6 +76,20 @@ db.exec(`
     FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE SET NULL
   );
 
+  CREATE TABLE IF NOT EXISTS jellyfin_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    recipients TEXT NOT NULL,
+    template_id INTEGER,
+    custom_message TEXT,
+    active INTEGER DEFAULT 1,
+    last_triggered DATETIME,
+    trigger_count INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE SET NULL
+  );
+
   CREATE TABLE IF NOT EXISTS message_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     recipient TEXT NOT NULL,

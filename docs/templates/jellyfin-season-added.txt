@@ -1,0 +1,5 @@
+📥 *New Season on {{ServerName}}*
+
+📺 {{SeriesName}}
+🔢 Season {{SeasonNumber00}}
+📝 {{Overview}}

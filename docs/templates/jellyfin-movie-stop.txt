@@ -1,0 +1,8 @@
+⏹️ *Stopped Watching*
+
+🎬 {{Name}} ({{Year}})
+👤 {{NotificationUsername}}
+📱 {{ClientName}} on {{DeviceName}}
+⏱️ {{PlaybackPosition}} / {{RunTime}}
+✅ Completed: {{PlayedToCompletion}}
+🖥️ {{ServerName}}

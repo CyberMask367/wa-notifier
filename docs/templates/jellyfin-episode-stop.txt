@@ -1,0 +1,9 @@
+⏹️ *Stopped Watching*
+
+📺 {{SeriesName}}
+🔢 S{{SeasonNumber00}}E{{EpisodeNumber00}} — {{Name}}
+👤 {{NotificationUsername}}
+📱 {{ClientName}} on {{DeviceName}}
+⏱️ {{PlaybackPosition}} / {{RunTime}}
+✅ Completed: {{PlayedToCompletion}}
+🖥️ {{ServerName}}

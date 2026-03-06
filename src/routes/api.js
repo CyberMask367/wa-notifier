@@ -298,3 +298,34 @@ router.put('/settings', (req, res) => {
 });
 
 module.exports = router;
+
+// ── Jellyfin Rules ────────────────────────────────────────────────────────────
+router.get('/jellyfin-rules', (req, res) => {
+  res.json(db.prepare('SELECT * FROM jellyfin_rules ORDER BY name').all());
+});
+
+router.post('/jellyfin-rules', (req, res) => {
+  const { name, event_type, recipients, template_id, custom_message } = req.body;
+  if (!name || !event_type || !recipients) return res.status(400).json({ error: 'name, event_type, recipients required' });
+  try {
+    const r = db.prepare('INSERT INTO jellyfin_rules (name, event_type, recipients, template_id, custom_message) VALUES (?, ?, ?, ?, ?)')
+      .run(name, event_type, JSON.stringify(recipients), template_id || null, custom_message || '');
+    res.json(db.prepare('SELECT * FROM jellyfin_rules WHERE id = ?').get(r.lastInsertRowid));
+  } catch { res.status(400).json({ error: 'Failed to create rule' }); }
+});
+
+router.put('/jellyfin-rules/:id', (req, res) => {
+  const { name, event_type, recipients, template_id, custom_message, active } = req.body;
+  db.prepare(`UPDATE jellyfin_rules SET
+    name = COALESCE(?, name), event_type = COALESCE(?, event_type),
+    recipients = COALESCE(?, recipients), template_id = COALESCE(?, template_id),
+    custom_message = COALESCE(?, custom_message), active = COALESCE(?, active)
+    WHERE id = ?`)
+    .run(name, event_type, recipients ? JSON.stringify(recipients) : null, template_id, custom_message, active, req.params.id);
+  res.json(db.prepare('SELECT * FROM jellyfin_rules WHERE id = ?').get(req.params.id));
+});
+
+router.delete('/jellyfin-rules/:id', (req, res) => {
+  db.prepare('DELETE FROM jellyfin_rules WHERE id = ?').run(req.params.id);
+  res.json({ success: true });
+});
