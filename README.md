@@ -371,7 +371,7 @@ WA Notifier includes a dedicated handler for [Jellyfin](https://jellyfin.org/) w
 ### Setup
 
 1. In Jellyfin, install the **Webhook** plugin
-2. Add a new webhook destination pointing to:
+2. Add a new generic webhook destination pointing to:
 ```
   http://your-server:3000/jellyfin
 ```
