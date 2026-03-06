@@ -383,7 +383,7 @@ WA Notifier includes a dedicated handler for [Jellyfin](https://jellyfin.org/) w
 
 All avaliable Variables are displayed on the Jellyfin page on the web UI.
 
-You can use Variables to create messages or templates for WA Notifier. You can copy and paste from my ready made [Templates](/docs/templates) and add them via the Templates page in the UI.
+You can use Variables to create messages or templates for WA Notifier. You can also copy and paste from my ready made [Templates](/docs/templates) and add them via the Templates page in the UI.
 
 **Example template:**
 ```
@@ -400,6 +400,7 @@ curl -X POST http://your_ip_address:3000/jellyfin/debug \
   -d @jellyfin-payload.json
 ```
 then check the container logs.
+
 ---
 
 ## Schedules
