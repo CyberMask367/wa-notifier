@@ -114,3 +114,7 @@ for (const [key, value] of Object.entries(defaults)) {
 }
 
 module.exports = db;
+
+// Migrations
+try { db.exec('ALTER TABLE webhook_rules ADD COLUMN conditions TEXT DEFAULT "[]"'); } catch {}
+try { db.exec('ALTER TABLE jellyfin_rules ADD COLUMN conditions TEXT DEFAULT "[]"'); } catch {}

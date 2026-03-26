@@ -245,8 +245,9 @@ router.post('/webhook-rules', (req, res) => {
   if (!name || !slug || !recipients) return res.status(400).json({ error: 'name, slug, recipients required' });
   const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9-_]/g, '-');
   try {
-    const r = db.prepare('INSERT INTO webhook_rules (name, slug, recipients, template_id, custom_message) VALUES (?, ?, ?, ?, ?)')
-      .run(name, cleanSlug, JSON.stringify(recipients), template_id || null, custom_message || '');
+    const conditions = req.body.conditions || [];
+  const r = db.prepare('INSERT INTO webhook_rules (name, slug, recipients, template_id, custom_message, conditions) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(name, cleanSlug, JSON.stringify(recipients), template_id || null, custom_message || '', JSON.stringify(conditions));
     res.json(db.prepare('SELECT * FROM webhook_rules WHERE id = ?').get(r.lastInsertRowid));
   } catch { res.status(400).json({ error: 'Slug already exists' }); }
 });
@@ -254,12 +255,14 @@ router.post('/webhook-rules', (req, res) => {
 router.put('/webhook-rules/:id', (req, res) => {
   const { name, slug, recipients, template_id, custom_message, active } = req.body;
   const cleanSlug = slug ? slug.toLowerCase().replace(/[^a-z0-9-_]/g, '-') : null;
+  const conditions = req.body.conditions;
   db.prepare(`UPDATE webhook_rules SET
     name = COALESCE(?, name), slug = COALESCE(?, slug),
     recipients = COALESCE(?, recipients), template_id = COALESCE(?, template_id),
-    custom_message = COALESCE(?, custom_message), active = COALESCE(?, active)
+    custom_message = COALESCE(?, custom_message), active = COALESCE(?, active),
+    conditions = COALESCE(?, conditions)
     WHERE id = ?`)
-    .run(name, cleanSlug, recipients ? JSON.stringify(recipients) : null, template_id, custom_message, active, req.params.id);
+    .run(name, cleanSlug, recipients ? JSON.stringify(recipients) : null, template_id, custom_message, active, conditions ? JSON.stringify(conditions) : null, req.params.id);
   res.json(db.prepare('SELECT * FROM webhook_rules WHERE id = ?').get(req.params.id));
 });
 
@@ -308,20 +311,23 @@ router.post('/jellyfin-rules', (req, res) => {
   const { name, event_type, recipients, template_id, custom_message } = req.body;
   if (!name || !event_type || !recipients) return res.status(400).json({ error: 'name, event_type, recipients required' });
   try {
-    const r = db.prepare('INSERT INTO jellyfin_rules (name, event_type, recipients, template_id, custom_message) VALUES (?, ?, ?, ?, ?)')
-      .run(name, event_type, JSON.stringify(recipients), template_id || null, custom_message || '');
+    const jfConditions = req.body.conditions || [];
+    const r = db.prepare('INSERT INTO jellyfin_rules (name, event_type, recipients, template_id, custom_message, conditions) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(name, event_type, JSON.stringify(recipients), template_id || null, custom_message || '', JSON.stringify(jfConditions));
     res.json(db.prepare('SELECT * FROM jellyfin_rules WHERE id = ?').get(r.lastInsertRowid));
   } catch { res.status(400).json({ error: 'Failed to create rule' }); }
 });
 
 router.put('/jellyfin-rules/:id', (req, res) => {
   const { name, event_type, recipients, template_id, custom_message, active } = req.body;
+  const jfCondPut = req.body.conditions;
   db.prepare(`UPDATE jellyfin_rules SET
     name = COALESCE(?, name), event_type = COALESCE(?, event_type),
     recipients = COALESCE(?, recipients), template_id = COALESCE(?, template_id),
-    custom_message = COALESCE(?, custom_message), active = COALESCE(?, active)
+    custom_message = COALESCE(?, custom_message), active = COALESCE(?, active),
+    conditions = COALESCE(?, conditions)
     WHERE id = ?`)
-    .run(name, event_type, recipients ? JSON.stringify(recipients) : null, template_id, custom_message, active, req.params.id);
+    .run(name, event_type, recipients ? JSON.stringify(recipients) : null, template_id, custom_message, active, jfCondPut ? JSON.stringify(jfCondPut) : null, req.params.id);
   res.json(db.prepare('SELECT * FROM jellyfin_rules WHERE id = ?').get(req.params.id));
 });
 

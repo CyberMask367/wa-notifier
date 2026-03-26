@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db');
 const wa = require('../whatsapp');
 const { applyTemplate, logMessage } = require('../scheduler');
+const { applyConditions } = require('../conditions');
 
 // Debug endpoint
 router.post('/debug', (req, res) => {
@@ -35,7 +36,7 @@ router.post('/', async (req, res) => {
   const eventNorm        = rawEvent.toLowerCase().replace(/\s+/g, '_');
   const compoundNorm2    = itemType ? `${eventNorm}:${itemType.toLowerCase()}` : eventNorm;
 
-  console.log(`[Jellyfin] NotificationType="${rawEvent}" ItemType="${itemType}" → compound="${compound}"`);
+  console.log(`[Jellyfin] NotificationType="${rawEvent}" ItemType="${itemType}" → compound="${compound}"`);  // rules logged below
 
   // Build vars — lowercase + original case
   const lowercased = {};
@@ -94,6 +95,7 @@ router.post('/', async (req, res) => {
     rulesToFire = wildcardRules;
   }
 
+  console.log(`[Jellyfin] Rules firing: ${rulesToFire.map(r=>r.name).join(', ')||'none'}`);
   if (!rulesToFire.length) {
     return res.json({ matched: 0, event: compound, message: 'No active rules for this event' });
   }
@@ -110,17 +112,34 @@ router.post('/', async (req, res) => {
 
     if (!message) continue;
 
-    const recipients = JSON.parse(rule.recipients || '[]');
+    const baseRecipients = JSON.parse(rule.recipients || '[]');
+    const { recipients, template_id: condTemplate, custom_message: condMessage, matched } = applyConditions(rule, vars, baseRecipients);
+
+    // Conditions can override template/message
+    let finalMessage = message;
+    if (condTemplate && condTemplate !== rule.template_id) {
+      const tpl = db.prepare('SELECT body FROM templates WHERE id = ?').get(condTemplate);
+      if (tpl) finalMessage = applyTemplate(tpl.body, vars);
+    } else if (condMessage && condMessage !== rule.custom_message) {
+      finalMessage = applyTemplate(condMessage, vars);
+    }
+
+    if (!recipients.length) {
+      console.log(`[Jellyfin] No recipients for rule "${rule.name}" — skipping`);
+      continue;
+    }
+
+    console.log(`[Jellyfin] Rule "${rule.name}" — conditions matched: ${matched.length}, recipients: ${recipients.length}`);
 
     const opts = vars.poster_url
-      ? { url: vars.poster_url, fileName: 'poster.jpg', caption: message }
-      : message;
+      ? { url: vars.poster_url, fileName: 'poster.jpg', caption: finalMessage }
+      : finalMessage;
 
     const results = await wa.sendToRecipients(recipients, opts);
 
     for (const r of results) {
       console.log(`[Jellyfin] Send to ${r.recipient}: ${r.status}${r.error ? ' — ' + r.error : ''}${r.note ? ' ('+r.note+')' : ''}`);
-      logMessage(r.recipient, message, `jellyfin:${compound}`, r.status, r.error);
+      logMessage(r.recipient, finalMessage, `jellyfin:${compound}`, r.status, r.error);
     }
 
     db.prepare('UPDATE jellyfin_rules SET last_triggered = CURRENT_TIMESTAMP, trigger_count = trigger_count + 1 WHERE id = ?').run(rule.id);

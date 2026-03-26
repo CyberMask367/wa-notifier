@@ -3,9 +3,8 @@ const router = express.Router();
 const db = require('../db');
 const wa = require('../whatsapp');
 const { applyTemplate, logMessage } = require('../scheduler');
+const { applyConditions } = require('../conditions');
 
-// Flatten a nested object into dot-notation keys for template vars
-// e.g. { a: { b: 1 } } → { 'a.b': 1, a_b: 1 }
 function flattenObject(obj, prefix = '') {
   const result = {};
   for (const [key, val] of Object.entries(obj || {})) {
@@ -13,21 +12,16 @@ function flattenObject(obj, prefix = '') {
     const underscore = prefix ? `${prefix}_${key}` : key;
     if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
       Object.assign(result, flattenObject(val, flat));
-      // also underscore version
-      const sub = flattenObject(val, underscore);
-      Object.assign(result, sub);
+      Object.assign(result, flattenObject(val, underscore));
     } else {
       result[flat] = String(val ?? '');
       result[underscore] = String(val ?? '');
-      // Also set the short key at root level if no prefix collision
-      if (!prefix && !(key in result)) result[key] = String(val ?? '');
       if (!prefix) result[key] = String(val ?? '');
     }
   }
   return result;
 }
 
-// POST /webhook/:slug
 router.post('/:slug', async (req, res) => {
   const { slug } = req.params;
 
@@ -36,7 +30,6 @@ router.post('/:slug', async (req, res) => {
     return res.status(404).json({ error: `No active webhook found for slug "${slug}"` });
   }
 
-  // Build template vars from the entire JSON body (flattened)
   const vars = {
     ...flattenObject(req.body),
     date: new Date().toLocaleDateString(),
@@ -45,21 +38,30 @@ router.post('/:slug', async (req, res) => {
     slug,
   };
 
-  let message = rule.custom_message || '';
-  if (rule.template_id) {
-    const tpl = db.prepare('SELECT body FROM templates WHERE id = ?').get(rule.template_id);
+  // Apply conditions
+  const baseRecipients = JSON.parse(rule.recipients || '[]');
+  const { recipients, template_id, custom_message, matched } = applyConditions(rule, vars, baseRecipients);
+
+  console.log(`[Webhook:${slug}] Conditions matched: ${matched.length}, recipients: ${recipients.length}`);
+
+  if (!recipients.length) {
+    return res.json({ success: false, error: 'No recipients — add base recipients or matching conditions' });
+  }
+
+  // Build message
+  let message = custom_message || '';
+  if (template_id) {
+    const tpl = db.prepare('SELECT body FROM templates WHERE id = ?').get(template_id);
     if (tpl) message = applyTemplate(tpl.body, vars);
   } else if (message) {
     message = applyTemplate(message, vars);
   }
 
   if (!message) {
-    return res.status(400).json({ error: 'Webhook rule has no message or template configured' });
+    return res.status(400).json({ error: 'No message or template configured' });
   }
 
-  const recipients = JSON.parse(rule.recipients || '[]');
-
-  // If the payload has an image URL, send it as a photo with the message as caption
+  // Send
   const imageUrl = req.body.image || req.body.image_url || req.body.poster;
   const opts = imageUrl
     ? { url: imageUrl, fileName: 'poster.jpg', caption: message }
@@ -71,10 +73,9 @@ router.post('/:slug', async (req, res) => {
     logMessage(r.recipient, message, `webhook:${slug}`, r.status, r.error);
   }
 
-  // Update trigger stats
   db.prepare('UPDATE webhook_rules SET last_triggered = CURRENT_TIMESTAMP, trigger_count = trigger_count + 1 WHERE id = ?').run(rule.id);
 
-  res.json({ success: true, slug, matched: recipients.length, results });
+  res.json({ success: true, slug, recipients: recipients.length, conditions_matched: matched.length, results });
 });
 
 module.exports = router;

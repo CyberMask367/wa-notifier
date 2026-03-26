@@ -19,6 +19,7 @@ Built on [Baileys](https://github.com/WhiskeySockets/Baileys), it links to your 
 - **Message Templates** — Reusable messages with `{{variable}}` substitution
 - **Rich Media** — Send images, video, audio, PDFs, and documents — via file upload or URL
 - **Contacts & Groups** — Manage recipients with names and organize WhatsApp group JIDs
+- **Conditional Routing** — Route messages to different recipients or use different templates based on payload variables, with AND/OR logic and replace/add recipient modes
 - **Message Logs** — Full history of every sent message with source and status
 - **Persistent Auth** — WhatsApp session is saved to disk; survives restarts without re-scanning
 
@@ -316,6 +317,10 @@ Supports images, video, audio, PDFs, Office documents, and more — up to 64 MB.
 | `POST` | `/api/webhook-rules` | — | Create a webhook rule |
 | `PUT` | `/api/webhook-rules/:id` | — | Update/toggle a rule |
 | `DELETE` | `/api/webhook-rules/:id` | — | Delete a webhook rule |
+| `GET` | `/api/jellyfin-rules` | — | List Jellyfin rules |
+| `POST` | `/api/jellyfin-rules` | — | Create a Jellyfin rule |
+| `PUT` | `/api/jellyfin-rules/:id` | — | Update/toggle a Jellyfin rule |
+| `DELETE` | `/api/jellyfin-rules/:id` | — | Delete a Jellyfin rule |
 | `GET` | `/api/logs` | — | Paginated message logs |
 | `DELETE` | `/api/logs` | — | Clear all logs |
 | `GET` | `/api/settings` | — | Get settings |
@@ -364,7 +369,49 @@ requests.post(
 
 ---
 
+## Webhook & Jellyfin Conditions (Added in v1.2)
+
+Both webhook rules and Jellyfin rules support **conditions** — per-rule logic that routes messages differently based on the incoming payload.
+
+### How it works
+
+Each rule can have multiple conditions. Each condition has:
+- **One or more if-checks** — field/operator/value checks evaluated together
+- **AND / OR logic** — ALL checks must pass (AND) or ANY check must pass (OR)
+- **→ Then** — what happens if the condition matches: add recipients, override template, override message
+
+### Recipient modes
+
+Each condition has a recipient mode:
+
+| Mode | Behaviour |
+|---|---|
+| **＋ Add to base** | Condition recipients are added on top of the rule's base recipients |
+| **⚡ Replace base** | Base recipients are dropped entirely — only the condition's recipients receive the message |
+
+If multiple conditions match and any one of them is **Replace**, the base recipients are dropped. Additional **Add** conditions then stack on top of the replace set.
+
+### Example
+
+Rule base recipients: `#general-group`
+
+| Condition | Checks | Mode | Recipients | Template |
+|---|---|---|---|---|
+| 1 | `NotificationUsername = john` AND `status = approved` | Replace | John's number | `approved-template` |
+| 2 | `priority = urgent` | Add | `#alerts-group` | — |
+
+- If username is john AND status is approved → only john gets it with the approved template
+- If priority is urgent → alerts group is added on top
+- Otherwise → general group gets the default message
+
+### Operators
+
+`equals` · `not equals` · `contains` · `not contains` · `starts with` · `ends with` · `is empty` · `is not empty`
+
+---
+
 ## Jellyfin Integration
+
 
 WA Notifier includes a dedicated handler for [Jellyfin](https://jellyfin.org/) webhook notifications.
 
@@ -378,6 +425,30 @@ WA Notifier includes a dedicated handler for [Jellyfin](https://jellyfin.org/) w
   and make sure **Send All Properties** enabled
    
 3. In the WA Notifier web UI, go to `🎬 Jellyfin` under Automations category and create rules based on events with your recipients and message or templates
+
+### Event Types
+
+Rules support **compound event types** that match both the event and the media type — so you can send different messages for movies vs episodes vs music:
+
+| Event Type | Fires when |
+|---|---|
+| `ItemAdded:Movie` | A movie is added to the library |
+| `ItemAdded:Episode` | An episode is added |
+| `ItemAdded:Season` | A season is added |
+| `ItemAdded:Audio` | A song is added |
+| `ItemAdded:MusicAlbum` | An album is added |
+| `PlaybackStart:Movie` | Movie playback starts |
+| `PlaybackStart:Episode` | Episode playback starts |
+| `PlaybackStart:Audio` | Music playback starts |
+| `PlaybackStop:Movie` | Movie playback stops |
+| `PlaybackStop:Episode` | Episode playback stops |
+| `PlaybackStop:Audio` | Music playback stops |
+| `AuthenticationSuccess` | User login |
+| `AuthenticationFailure` | Failed login attempt |
+| `UserCreated` | New user created |
+| `*` | All events (wildcard) |
+
+Compound rules take priority over generic ones — if you have both `PlaybackStart:Episode` and `PlaybackStart`, the compound rule fires for episodes and the generic fires for everything else.
 
 ### Available Jellyfin Variables
 
@@ -464,12 +535,14 @@ whatsapp-notifier/
 │   ├── whatsapp.js       # Baileys connection, QR auth, message sending
 │   ├── db.js             # SQLite setup and schema migrations
 │   ├── scheduler.js      # Cron job runner for schedules and reminders
+│   ├── conditions.js     # Condition evaluator for webhook and Jellyfin rules
 │   ├── routes/
 │   │   ├── api.js        # REST API (send, contacts, templates, etc.)
 │   │   ├── webhook.js    # Generic webhook handler
 │   │   └── jellyfin.js   # Jellyfin-specific webhook handler
 │   └── public/
 │       └── index.html    # Single-page web UI
+├── templates/            # Ready-made message templates (Jellyfin, Jellyseerr, etc.)
 ├── Dockerfile
 ├── docker-compose.yml
 └── package.json
